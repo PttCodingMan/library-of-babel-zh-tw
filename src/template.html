@@ -1,0 +1,393 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>巴別圖書館・繁體中文館</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=LXGW+WenKai+TC:wght@400;700&family=Noto+Serif+TC:wght@400;600&display=swap" rel="stylesheet">
+<style>
+/* 版面構想：夜裡的六角形閱覽室。黛黑的室內，一頁宣紙色的書頁，朱砂只用在印章與搜尋標記。 */
+:root {
+  --ink-room: #13161b;
+  --room-2: #1b1f26;
+  --line: #2c323c;
+  --text: #d9d4c7;
+  --muted: #8d929a;
+  --paper: #ebe3d0;
+  --paper-ink: #221e18;
+  --rule: rgba(120, 90, 60, .16);
+  --cinnabar: #c9432f;
+  --cinnabar-soft: rgba(201, 67, 47, .22);
+  --display: "LXGW WenKai TC", "Kaiti TC", "BiauKai", "DFKai-SB", serif;
+  --body: "Noto Serif TC", "PMingLiU", "Songti TC", serif;
+  --mono: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+  --fs-page: 20px;
+  color-scheme: dark;
+}
+* { box-sizing: border-box; }
+html, body { margin: 0; background: var(--ink-room); color: var(--text); font-family: var(--body); line-height: 1.7; }
+body { padding: max(16px, env(safe-area-inset-top)) 16px 48px; }
+.wrap { max-width: 980px; margin: 0 auto; display: grid; gap: 28px; }
+a { color: var(--text); }
+:focus-visible { outline: 2px solid var(--cinnabar); outline-offset: 2px; }
+
+/* 標題 */
+header { display: grid; grid-template-columns: auto 1fr; gap: 18px; align-items: center; padding-top: 18px; }
+.seal {
+  writing-mode: vertical-rl; font-family: var(--display); font-weight: 700;
+  color: var(--cinnabar); border: 3px solid var(--cinnabar); border-radius: 4px;
+  padding: 8px 4px; font-size: 22px; line-height: 1.05; letter-spacing: .05em;
+  box-shadow: inset 0 0 0 2px var(--ink-room), inset 0 0 0 3px var(--cinnabar-soft);
+}
+h1 { font-family: var(--display); font-size: clamp(34px, 7vw, 54px); line-height: 1.1; margin: 0; letter-spacing: .12em; font-weight: 700; text-wrap: balance; }
+h1 small { display: block; font-size: .42em; letter-spacing: .3em; color: var(--muted); margin-top: 8px; font-weight: 400; }
+.thesis { grid-column: 1 / -1; font-size: 17px; max-width: 40em; margin: 0; color: var(--text); }
+.facts { grid-column: 1 / -1; display: flex; flex-wrap: wrap; gap: 8px 22px; margin: 0; padding: 0; list-style: none; font-size: 14px; color: var(--muted); font-variant-numeric: tabular-nums; }
+.facts b { color: var(--text); font-weight: 600; }
+sup { font-size: .7em; }
+
+/* 分頁 */
+nav { display: flex; gap: 4px; border-bottom: 1px solid var(--line); }
+nav a { text-decoration: none; padding: 10px 16px; font-family: var(--display); font-size: 18px; color: var(--muted); border-bottom: 2px solid transparent; margin-bottom: -1px; }
+nav a[aria-current="page"] { color: var(--text); border-bottom-color: var(--cinnabar); }
+section[hidden] { display: none; }
+section { display: grid; gap: 18px; }
+
+/* 控制項 */
+.panel { background: var(--room-2); border: 1px solid var(--line); border-radius: 6px; padding: 16px; display: grid; gap: 14px; }
+label, .lbl { font-size: 14px; color: var(--muted); }
+textarea, input[type=number] {
+  width: 100%; background: var(--ink-room); color: var(--text); border: 1px solid var(--line);
+  border-radius: 4px; padding: 8px 10px; font: inherit; font-size: 15px;
+}
+textarea.mono { font-family: var(--mono); font-size: 12px; line-height: 1.45; word-break: break-all; resize: vertical; }
+.coords { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 10px; }
+.coords div { display: grid; gap: 4px; }
+input[type=number] { font-variant-numeric: tabular-nums; }
+.row { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+button {
+  font-family: var(--display); font-size: 16px; color: var(--text); background: transparent;
+  border: 1px solid var(--line); border-radius: 4px; padding: 7px 14px; cursor: pointer;
+}
+button:hover { border-color: var(--muted); }
+button.primary { background: var(--cinnabar); border-color: var(--cinnabar); color: #fff6ee; }
+button.primary:hover { filter: brightness(1.08); }
+.spacer { flex: 1; }
+.err { color: #f09a86; font-size: 14px; margin: 0; }
+.err:empty { display: none; }
+fieldset { border: 0; padding: 0; margin: 0; display: flex; flex-wrap: wrap; gap: 6px 16px; align-items: center; }
+legend { float: left; margin-right: 10px; font-size: 14px; color: var(--muted); }
+fieldset label { color: var(--text); font-size: 15px; display: inline-flex; gap: 6px; align-items: center; }
+
+/* 書頁 */
+.locline { font-size: 15px; color: var(--muted); display: flex; flex-wrap: wrap; gap: 4px 14px; font-variant-numeric: tabular-nums; }
+.locline b { color: var(--text); font-weight: 600; }
+.locline code { font-family: var(--mono); font-size: 12px; color: var(--text); }
+.leaf {
+  background: var(--paper); color: var(--paper-ink); border-radius: 3px;
+  box-shadow: 0 1px 0 rgba(255,255,255,.04), 0 18px 40px rgba(0,0,0,.45);
+  position: relative;
+}
+.leaf-scroll { overflow-x: auto; overflow-y: hidden; }
+.page {
+  font-family: var(--body); font-size: var(--fs-page); line-height: 1.75; margin: 0;
+  word-break: break-all; line-break: anywhere; white-space: pre-wrap;
+}
+.page.v {
+  writing-mode: vertical-rl; height: calc(var(--fs-page) * 25 + 56px); padding: 28px 30px;
+  background-image: repeating-linear-gradient(to left, transparent 0 calc(var(--fs-page) * 1.75 - 1px), var(--rule) calc(var(--fs-page) * 1.75 - 1px) calc(var(--fs-page) * 1.75));
+  background-origin: content-box; background-clip: content-box; background-attachment: local;
+}
+.page.h { padding: 26px clamp(18px, 4vw, 44px); max-width: 100%; }
+.page mark { background: var(--cinnabar-soft); color: inherit; box-shadow: 0 0 0 1px rgba(201,67,47,.5); border-radius: 2px; }
+.folio { display: flex; justify-content: space-between; font-size: 13px; color: var(--muted); font-variant-numeric: tabular-nums; }
+
+/* 尋找結果 */
+.result { border-left: 3px solid var(--cinnabar); padding: 4px 0 4px 14px; display: grid; gap: 8px; }
+.result[hidden] { display: none; }
+.counter { font-size: 13px; color: var(--muted); font-variant-numeric: tabular-nums; }
+.bad { color: #f09a86; }
+.bad span { font-size: 18px; color: var(--text); background: rgba(240,154,134,.14); padding: 0 3px; margin: 0 2px; border-radius: 2px; }
+
+/* 關於 */
+.prose { max-width: 40em; display: grid; gap: 14px; font-size: 16px; }
+.prose p { margin: 0; }
+.prose h2 { font-family: var(--display); font-weight: 400; font-size: 22px; margin: 10px 0 0; letter-spacing: .06em; }
+.charset { font-size: 13px; color: var(--muted); }
+
+@media (max-width: 520px) {
+  :root { --fs-page: 18px; }
+  .coords { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  nav a { padding: 10px 12px; }
+}
+@media (prefers-reduced-motion: no-preference) {
+  .page { transition: opacity .25s ease; }
+  .page.fading { opacity: .25; }
+}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <div class="seal" aria-hidden="true">巴別</div>
+    <h1>巴別圖書館<small>繁體中文館</small></h1>
+    <p class="thesis">用這些字寫成、長度在三千二百字以內的每一段文字，都已經擺在這裡的某一頁。包括你寫過的、還沒寫的，和永遠不會有人寫的。</p>
+    <ul class="facts">
+      <li>字集 <b id="f-n"></b> 字</li>
+      <li>每頁 <b>3,200</b> 字</li>
+      <li>每室 4 牆 × 5 架 × 32 冊 × 410 頁</li>
+      <li>藏書約 <b id="f-m"></b> 頁</li>
+    </ul>
+  </header>
+
+  <nav aria-label="館內">
+    <a href="#browse" data-tab="browse">翻閱</a>
+    <a href="#search" data-tab="search">尋找</a>
+    <a href="#about" data-tab="about">關於</a>
+  </nav>
+
+  <!-- 翻閱 -->
+  <section id="browse">
+    <div class="locline" id="locline"></div>
+    <div class="leaf">
+      <div class="leaf-scroll" id="leaf-scroll">
+        <pre class="page v" id="page" aria-live="polite"></pre>
+      </div>
+    </div>
+    <div class="row">
+      <button id="prev" title="同一冊的前一頁">‹ 上一頁</button>
+      <button id="next" title="同一冊的下一頁">下一頁 ›</button>
+      <span class="spacer"></span>
+      <button id="orient">改為橫排</button>
+      <button id="random" class="primary">隨機抽一頁</button>
+    </div>
+
+    <div class="panel">
+      <div style="display:grid;gap:4px">
+        <label for="hex">室號（36 進位，也可以直接貼上複製來的完整位址）</label>
+        <textarea id="hex" class="mono" rows="4" spellcheck="false" autocomplete="off"></textarea>
+      </div>
+      <div class="coords">
+        <div><label for="wall">第幾面牆（1–4）</label><input id="wall" type="number" min="1" max="4" inputmode="numeric"></div>
+        <div><label for="shelf">第幾層架（1–5）</label><input id="shelf" type="number" min="1" max="5" inputmode="numeric"></div>
+        <div><label for="vol">第幾冊（1–32）</label><input id="vol" type="number" min="1" max="32" inputmode="numeric"></div>
+        <div><label for="pg">第幾頁（1–410）</label><input id="pg" type="number" min="1" max="410" inputmode="numeric"></div>
+      </div>
+      <p class="err" id="browse-err"></p>
+      <div class="row">
+        <button id="go" class="primary">翻到這個位置</button>
+        <button id="copy">複製完整位址</button>
+        <span class="counter" id="copy-msg"></span>
+      </div>
+    </div>
+  </section>
+
+  <!-- 尋找 -->
+  <section id="search" hidden>
+    <div class="panel">
+      <div style="display:grid;gap:4px">
+        <label for="q">輸入一段文字，看看它在哪一頁</label>
+        <textarea id="q" rows="6">天地玄黃，宇宙洪荒。日月盈昃，辰宿列張。</textarea>
+        <div class="counter" id="q-count"></div>
+        <div class="bad" id="q-bad"></div>
+      </div>
+      <fieldset>
+        <legend>放在頁面</legend>
+        <label><input type="radio" name="pos" value="start" checked> 開頭</label>
+        <label><input type="radio" name="pos" value="random"> 隨機位置</label>
+      </fieldset>
+      <fieldset>
+        <legend>其餘的字</legend>
+        <label><input type="radio" name="fill" value="blank" checked> 全是空白</label>
+        <label><input type="radio" name="fill" value="random"> 隨機的字</label>
+      </fieldset>
+      <p class="err" id="search-err"></p>
+      <div class="row">
+        <button id="find" class="primary">尋找</button>
+        <button id="strip" hidden>把不支援的字換成空白</button>
+      </div>
+    </div>
+    <div class="result" id="result" hidden>
+      <div class="locline" id="r-loc"></div>
+      <div class="row">
+        <button id="r-open" class="primary">翻到這一頁</button>
+        <button id="r-again">換一頁再找</button>
+      </div>
+      <p class="counter" id="r-note"></p>
+    </div>
+  </section>
+
+  <!-- 關於 -->
+  <section id="about" hidden>
+    <div class="prose">
+      <h2>原典</h2>
+      <p>波赫士在 1941 年寫下〈巴別圖書館〉：宇宙是一座由無數六角形閱覽室組成的圖書館，書架上的書窮盡了所有字母的所有排列。絕大多數的書是無意義的亂碼，但其中必然也有每一本真實的書、它的每一種錯誤版本，以及對每個人一生的準確記載。</p>
+      <p>2015 年 Jonathan Basile 把它做成網站 libraryofbabel.info，用 29 個字元（英文小寫字母、空白、逗號、句號）組成 3,200 字元的頁面。這裡是同樣構想的繁體中文版。</p>
+      <h2>這座館的規格</h2>
+      <p>字集是 Big5（cp950）收錄的全部 <span id="a-han"></span> 個漢字，包含常用字與次常用字，再加上全形空白與 <span id="a-punct"></span> 個全形標點，共 <span id="a-n"></span> 字。簡體字、英文字母與數字不在字集裡。輸入時，半形標點與空白會自動換成全形。</p>
+      <p>每頁 3,200 字，所以總頁數是 <span id="a-n2"></span> 的 3,200 次方，大約 <span id="a-m"></span> 頁。可觀測宇宙的原子數大約是 10<sup>80</sup>，跟這個數字比起來近乎零。</p>
+      <h2>它其實沒有存任何東西</h2>
+      <p>每一頁的內容都是當場算出來的。把一頁文字看成一個 <span id="a-n3"></span> 進位、3,200 位數的整數，再經過一個固定的、可逆的置亂函數（大整數乘法與位元混合，加上 cycle walking 把結果限制在範圍內），得到的數字就是它的位址。反過來算，就能從位址還原出那一頁。因為函數是一對一的，每一頁剛好出現一次，不多也不少。</p>
+      <p>位址再拆成：室號 × 262,400 ＋（牆、架、冊、頁）。室號寫成 36 進位，長達八千多個字元，因為光是寫下「在哪裡」所需的資訊量，就跟那一頁本身差不多。這也是這座圖書館最殘酷的地方：找到一頁和寫出一頁，其實是同一件事。</p>
+      <p class="charset">字集順序：全形空白，接著「<span id="a-plist"></span>」，接著依 Big5 編碼順序排列的漢字（一、乙、丁、七……）。</p>
+    </div>
+  </section>
+</div>
+
+<script>
+const HANZI = "/*HANZI*/";
+/*CORE*/
+
+// ================= 介面 =================
+const $ = (id) => document.getElementById(id);
+const fmt = (n) => n.toLocaleString("zh-TW");
+const LOG10 = M.toString().length - 1;
+const sup = (e) => `10<sup>${fmt(e)}</sup>`;
+$("f-n").textContent = fmt(Number(N));
+$("f-m").innerHTML = sup(LOG10);
+$("a-han").textContent = fmt(Array.from(HANZI).length);
+$("a-punct").textContent = Array.from(PUNCT).length;
+$("a-n").textContent = $("a-n2").textContent = $("a-n3").textContent = fmt(Number(N));
+$("a-m").innerHTML = sup(LOG10);
+$("a-plist").textContent = PUNCT;
+
+let current = null;        // 目前位址 BigInt
+let highlight = null;      // [start, len]
+let vertical = true;
+let lastSearch = null;     // { text, opts }
+
+function shortHex(h) {
+  const s = h.toString(36);
+  return s.length > 18 ? `${s.slice(0, 8)}…${s.slice(-8)}` : s;
+}
+function locHTML(a) {
+  const p = splitAddr(a);
+  return `<span>第 <code>${shortHex(p.hex)}</code> 室</span><span>第 <b>${p.wall}</b> 面牆</span><span>第 <b>${p.shelf}</b> 層架</span><span>第 <b>${p.vol}</b> 冊</span><span>第 <b>${p.page}</b> 頁</span>`;
+}
+function fullAddr(a) {
+  const p = splitAddr(a);
+  return `${p.hex.toString(36)}:${p.wall}:${p.shelf}:${p.vol}:${p.page}`;
+}
+
+function render() {
+  const text = Array.from(pageAt(current));
+  const pageEl = $("page");
+  let html;
+  if (highlight) {
+    const [s, n] = highlight;
+    html = text.slice(0, s).join("") + "<mark>" + text.slice(s, s + n).join("") + "</mark>" + text.slice(s + n).join("");
+  } else html = text.join("");
+  pageEl.innerHTML = html;
+  pageEl.className = "page " + (vertical ? "v" : "h");
+  $("locline").innerHTML = locHTML(current);
+  const p = splitAddr(current);
+  $("hex").value = p.hex.toString(36);
+  $("wall").value = p.wall; $("shelf").value = p.shelf; $("vol").value = p.vol; $("pg").value = p.page;
+  $("prev").disabled = current === 0n;
+  $("next").disabled = current >= M - 1n;
+  // 捲到標記處，或回到頁首
+  const sc = $("leaf-scroll");
+  const mark = pageEl.querySelector("mark");
+  requestAnimationFrame(() => {
+    if (mark) mark.scrollIntoView({ block: "nearest", inline: "center" });
+    else sc.scrollLeft = vertical ? sc.scrollWidth : 0;
+  });
+}
+function goTo(a, hl = null) {
+  current = a; highlight = hl; $("browse-err").textContent = ""; $("copy-msg").textContent = "";
+  render();
+}
+
+$("random").onclick = () => goTo(randomBelow(M));
+$("prev").onclick = () => { if (current > 0n) goTo(current - 1n); };
+$("next").onclick = () => { if (current < M - 1n) goTo(current + 1n); };
+$("orient").onclick = () => {
+  vertical = !vertical;
+  $("orient").textContent = vertical ? "改為橫排" : "改為直排";
+  render();
+};
+$("go").onclick = () => {
+  const err = $("browse-err");
+  try {
+    let raw = $("hex").value.trim().toLowerCase().replace(/\s+/g, "");
+    let parts = { wall: +$("wall").value, shelf: +$("shelf").value, vol: +$("vol").value, page: +$("pg").value };
+    if (raw.includes(":")) {
+      const seg = raw.split(":");
+      if (seg.length !== 5) throw new Error("完整位址的格式是「室號:牆:架:冊:頁」。");
+      raw = seg[0];
+      parts = { wall: +seg[1], shelf: +seg[2], vol: +seg[3], page: +seg[4] };
+    }
+    if (!raw) throw new Error("請輸入室號。");
+    const hex = parseBase36(raw);
+    const lim = { wall: 4, shelf: 5, vol: 32, page: 410 };
+    const name = { wall: "牆", shelf: "架", vol: "冊", page: "頁" };
+    for (const k in lim) if (!Number.isInteger(parts[k]) || parts[k] < 1 || parts[k] > lim[k]) throw new Error(`「${name[k]}」要介於 1 到 ${lim[k]} 之間。`);
+    if (hex >= MAX_HEX) throw new Error("這個室號超出了圖書館的範圍：再往外已經沒有房間了。");
+    const a = joinAddr({ hex, ...parts });
+    if (a >= M) throw new Error("這是最後一間閱覽室，這個書架上沒有書。");
+    goTo(a);
+  } catch (e) { err.textContent = e.message; }
+};
+$("copy").onclick = async () => {
+  const s = fullAddr(current);
+  try { await navigator.clipboard.writeText(s); $("copy-msg").textContent = `已複製（${fmt(s.length)} 個字元）`; }
+  catch { $("hex").value = s; $("hex").select(); $("copy-msg").textContent = "無法自動複製，已選取完整位址，請手動複製。"; }
+};
+
+// ---- 尋找 ----
+function qText() { return normalize($("q").value); }
+function updateQ() {
+  const t = Array.from(qText());
+  const bad = unsupported(t.join(""));
+  $("q-count").textContent = `${fmt(t.length)} ／ 3,200 字`;
+  $("q-bad").innerHTML = bad.length ? `字集裡沒有：${bad.slice(0, 30).map((c) => `<span>${c === "　" ? "　" : c}</span>`).join("")}${bad.length > 30 ? "……" : ""}` : "";
+  $("strip").hidden = !bad.length;
+}
+$("q").addEventListener("input", updateQ);
+$("strip").onclick = () => {
+  $("q").value = Array.from(qText()).map((c) => (INDEX.has(c) ? c : "　")).join("");
+  updateQ();
+};
+function radio(name) { return document.querySelector(`input[name=${name}]:checked`).value; }
+function doSearch() {
+  const err = $("search-err"); err.textContent = "";
+  const t = Array.from(qText());
+  if (!t.length) { err.textContent = "請先輸入文字。"; return; }
+  if (t.length > L) { err.textContent = `超過 3,200 字了（目前 ${fmt(t.length)} 字），一頁放不下。`; return; }
+  const bad = unsupported(t.join(""));
+  if (bad.length) { err.textContent = "有些字不在字集裡，請刪掉，或按「把不支援的字換成空白」。"; return; }
+  const pos = radio("pos"), fill = radio("fill");
+  const start = pos === "random" ? Number(randomBelow(BigInt(L - t.length + 1))) : 0;
+  const page = new Array(L);
+  for (let i = 0; i < L; i++) page[i] = fill === "random" ? randomChar() : "　";
+  for (let i = 0; i < t.length; i++) page[start + i] = t[i];
+  const a = addrOfText(page.join(""));
+  lastSearch = { a, hl: [start, t.length] };
+  $("r-loc").innerHTML = locHTML(a);
+  $("r-note").textContent = fill === "random" || pos === "random"
+    ? "周圍的字是隨機的，所以每找一次都會落在不同的一頁。這段文字在館裡出現的次數多到數不完。"
+    : "這是唯一一頁「只有這段文字、其餘全是空白」的書頁。";
+  $("result").hidden = false;
+}
+$("find").onclick = doSearch;
+$("r-again").onclick = () => {
+  if (radio("pos") === "start" && radio("fill") === "blank") document.querySelector("input[name=fill][value=random]").checked = true;
+  doSearch();
+};
+$("r-open").onclick = () => { location.hash = "browse"; show("browse"); goTo(lastSearch.a, lastSearch.hl); };
+
+// ---- 分頁 ----
+function show(tab) {
+  for (const id of ["browse", "search", "about"]) $(id).hidden = id !== tab;
+  document.querySelectorAll("nav a").forEach((a) => { if (a.dataset.tab === tab) a.setAttribute("aria-current", "page"); else a.removeAttribute("aria-current"); });
+}
+function route() { const t = location.hash.slice(1); show(["browse", "search", "about"].includes(t) ? t : "browse"); }
+window.addEventListener("hashchange", route);
+route();
+updateQ();
+goTo(randomBelow(M));
+</script>
+</body>
+</html>
