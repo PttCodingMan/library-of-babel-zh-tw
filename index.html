@@ -745,14 +745,21 @@ function render(animate = true) {
   $("prev").disabled = current === 0n;
   $("next").disabled = current >= M - 1n;
   $("hint").textContent = vertical ? "直排，由右而左讀。往左捲動可以看完整頁三千二百字。" : "橫排。整頁三千二百字。";
+  // 捲到標記處（置中），沒有標記就回到頁首。用相對位移計算，不依賴瀏覽器的 scrollLeft 起點方向。
   const sc = $("leaf-scroll"), mark = pageEl.querySelector("i.m");
-  requestAnimationFrame(() => {
+  if (vertical) {
+    const b = sc.getBoundingClientRect();
     if (mark) {
-      const r = mark.getBoundingClientRect(), b = sc.getBoundingClientRect();
-      if (vertical) sc.scrollLeft += r.right - b.right + 60;
-      else mark.scrollIntoView({ block: "center" });
-    } else sc.scrollLeft = vertical ? sc.scrollWidth : 0;
-  });
+      const r = mark.getBoundingClientRect();
+      sc.scrollLeft += (r.left + r.right) / 2 - (b.left + b.right) / 2;
+    } else {
+      const r = pageEl.firstElementChild.getBoundingClientRect();
+      sc.scrollLeft += r.right - b.right + 40;
+    }
+  } else {
+    sc.scrollLeft = 0;
+    if (mark) mark.scrollIntoView({ block: "center" });
+  }
   if (animate) {
     const v = $("veil");
     v.classList.remove("go", "h"); void v.offsetWidth;
@@ -857,7 +864,12 @@ $("r-again").onclick = () => {
 };
 $("r-open").onclick = () => openAt(lastSearch.a, lastSearch.hl);
 $("r-share").onclick = () => { const s = linkFor(lastSearch.a, lastSearch.hl); copyText(s, linkMsg(s), "r-msg"); };
-function openAt(a, hl) { location.hash = "browse"; goTo(a, hl); window.scrollTo({ top: 0 }); }
+function openAt(a, hl) {        // 先讓翻閱頁可見，才能量位置、捲到標記處
+  history.pushState(null, "", hashFor(a, hl));
+  show("browse");
+  window.scrollTo({ top: 0 });
+  goTo(a, hl);
+}
 
 // ---- 你的一生 ----
 const STORE = "babel-life-v1";
