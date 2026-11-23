@@ -364,8 +364,10 @@ section.tab { padding-top: 8px; }
       <p class="fine" id="r-note"></p>
       <div class="row">
         <button class="btn primary" id="r-open">翻到這一頁</button>
+        <button class="btn" id="r-share">複製這一頁的連結</button>
         <button class="btn" id="r-again">換一頁再找</button>
       </div>
+      <p class="note" id="r-msg" role="status" style="overflow-wrap:anywhere"></p>
     </div>
   </section>
 
@@ -410,8 +412,10 @@ section.tab { padding-top: 8px; }
       <div class="row">
         <button class="btn primary" id="l-open">翻到這一頁</button>
         <button class="btn" id="l-keep">收進我的索引</button>
+        <button class="btn" id="l-share">複製這一頁的連結</button>
         <button class="btn" id="l-other">換一個上下文</button>
       </div>
+      <p class="note" id="l-msg" role="status" style="overflow-wrap:anywhere"></p>
       <p class="fine" id="l-fine"></p>
     </div>
 
@@ -433,7 +437,10 @@ section.tab { padding-top: 8px; }
       <p>每頁 3,200 字，所以總頁數是 <span id="a-n2"></span> 的 3,200 次方，大約 <span id="a-m"></span> 頁。可觀測宇宙的原子數大約是 10<sup>80</sup>，跟這個數字比起來近乎零。</p>
       <h2>它其實沒有存任何東西</h2>
       <p>每一頁的內容都是當場算出來的。把一頁文字看成一個 <span id="a-n3"></span> 進位、3,200 位數的整數，再經過一個固定的、可逆的置亂函數（大整數乘法與位元混合，加上 cycle walking 把結果限制在範圍內），得到的數字就是它的位址。反過來算，就能從位址還原出那一頁。因為函數是一對一的，每一頁剛好出現一次，不多也不少。</p>
-      <p>位址再拆成：室號 × 262,400 ＋（牆、架、冊、頁）。室號寫成 36 進位，長達八千多個字元，因為光是寫下「在哪裡」所需的資訊量，就跟那一頁本身差不多。這也是這座圖書館最殘酷的地方：找到一頁和寫出一頁，其實是同一件事。</p>
+      <p>置亂是分層做的。一頁的「長度」是它最後一個非空白字的位置；長度相同的頁面占據同一段位址，只在段內打散。所以全空白的那一頁就在入口：第 0 室、第一面牆、第一層架、第 1 冊、第 1 頁。只寫了一句話的頁面，都收在離入口不遠的房間；越往外走，書頁越滿。</p>
+      <h2>網址就是位置</h2>
+      <p>位址拆成：室號 × 262,400 ＋（牆、架、冊、頁），網址列寫的就是這個位置，複製下來就能分享。網址裡沒有那一頁的文字，只有座標；打開的人得在自己的瀏覽器裡把那一頁算出來。</p>
+      <p>一句十八個字的話，室號大約四十五碼；寫滿三千二百字的頁面，室號長達八千多碼。這不是因為編碼做得不好，而是寫下「在哪裡」所需的資訊量，本來就跟那一頁的內容一樣多。這也是這座圖書館最殘酷的地方：找到一頁和寫出一頁，其實是同一件事。</p>
       <h2>關於「你的一生」</h2>
       <p>那裡說的每一句都是真的。你輸入的句子，確實早就有一頁收著它，而且不管誰在什麼時候查，都會得到同一個位址。寫著明天的那一頁也確實存在；只是它的隔壁，同樣存在著明天的每一種其他寫法。圖書館收藏一切，所以它從不替你挑選哪一個才是真的。</p>
       <p class="fine">字集順序：全形空白，接著「<span id="a-plist"></span>」，接著依 Big5 編碼順序排列的漢字（一、乙、丁、七……）。</p>
@@ -469,9 +476,9 @@ let current = null;      // 目前位址 BigInt
 let highlight = null;    // [start, len]
 let vertical = true;
 
-function shortHex(h) {
+function shortHex(h, max = 16) {
   const s = h.toString(36);
-  return s.length > 16 ? `${s.slice(0, 6)}…${s.slice(-6)}` : s;
+  return s.length > max ? `${s.slice(0, 6)}…${s.slice(-6)}` : s;
 }
 function fullAddr(a) {
   const p = splitAddr(a);
@@ -521,7 +528,7 @@ function drawWhere(a) {
   });
   $("ruler").firstElementChild.style.left = `${((p.page - 1) / 409) * 100}%`;
   $("coord").innerHTML =
-    `<dt>室</dt><dd class="hexid">${shortHex(p.hex)}<small>室號共 ${fmt(hs.length)} 碼</small></dd>` +
+    `<dt>室</dt><dd class="hexid">${shortHex(p.hex, 48)}<small>室號共 ${fmt(hs.length)} 碼</small></dd>` +
     `<dt>牆</dt><dd>第 <b>${zhNum(p.wall)}</b> 面</dd>` +
     `<dt>架</dt><dd>第 <b>${zhNum(p.shelf)}</b> 層</dd>` +
     `<dt>冊</dt><dd>第 <b class="num">${p.vol}</b> 冊</dd>` +
@@ -563,12 +570,13 @@ function render(animate = true) {
 function goTo(a, hl = null, animate = true) {
   current = a; highlight = hl; $("browse-err").textContent = ""; $("note").textContent = "";
   render(animate);
+  syncURL();
 }
 
-// ---- 可分享的連結：#p/<室號>:<牆>:<架>:<冊>:<頁>[~起,長] ----
+// ---- 可分享的連結：網址就是位置 #a/<室號>/<牆>/<架>/<冊>/<頁>[~起,長] ----
 function parseFull(raw) {
   raw = raw.trim().toLowerCase().replace(/\s+/g, "");
-  const seg = raw.split(":");
+  const seg = raw.split(/[:/]/);
   if (seg.length !== 5) throw new Error("完整位址的格式是「室號:牆:架:冊:頁」。");
   return checkAddr(seg[0], { wall: +seg[1], shelf: +seg[2], vol: +seg[3], page: +seg[4] });
 }
@@ -582,19 +590,28 @@ function checkAddr(raw, parts) {
   if (a >= M) throw new Error("這是最後一間閱覽室，這個書架上沒有書。");
   return a;
 }
-function linkFor(a, hl) {
-  return `${location.origin}${location.pathname}#p/${fullAddr(a)}${hl ? `~${hl[0]},${hl[1]}` : ""}`;
+function hashFor(a, hl) {
+  // 頁面若只有標記的那段文字、其後全是空白，標記就是多餘的：位置本身已經說明一切
+  if (hl && hl[0] === 0 && /^　*$/.test(Array.from(pageAt(a)).slice(hl[1]).join(""))) hl = null;
+  const p = splitAddr(a);
+  return `#a/${p.hex.toString(36)}/${p.wall}/${p.shelf}/${p.vol}/${p.page}${hl ? `~${hl[0]},${hl[1]}` : ""}`;
 }
-async function copyText(s, okMsg) {
-  try { await navigator.clipboard.writeText(s); $("note").textContent = okMsg; }
-  catch { $("hex").value = s; $("hex").closest("details").open = true; $("hex").select(); $("note").textContent = "無法自動複製，已選取，請手動複製。"; }
+const linkFor = (a, hl) => location.origin + location.pathname + hashFor(a, hl);
+function syncURL() {            // 網址列永遠就是目前的位置
+  if (current !== null && !$("browse").hidden) history.replaceState(null, "", hashFor(current, highlight));
 }
+async function copyText(s, okMsg, noteId = "note") {
+  const note = $(noteId);
+  try { await navigator.clipboard.writeText(s); note.textContent = okMsg; }
+  catch { note.textContent = "無法自動複製，請手動複製：" + s; }
+}
+const linkMsg = (s) => s.length < 400 ? `已複製連結：${s}` : `已複製連結（${fmt(s.length)} 個字元。這一頁寫得很滿，所以位置也很長）`;
 
 $("random").onclick = () => goTo(randomBelow(M));
 $("prev").onclick = () => { if (current > 0n) goTo(current - 1n); };
 $("next").onclick = () => { if (current < M - 1n) goTo(current + 1n); };
 $("orient").onclick = () => { vertical = !vertical; $("orient").textContent = vertical ? "改為橫排" : "改為直排"; render(); };
-$("share").onclick = () => { const s = linkFor(current, highlight); copyText(s, `已複製連結（${fmt(s.length)} 個字元。位址就是這麼長）`); };
+$("share").onclick = () => { const s = linkFor(current, highlight); copyText(s, linkMsg(s)); };
 $("copy").onclick = () => { const s = fullAddr(current); copyText(s, `已複製完整位址（${fmt(s.length)} 個字元）`); };
 $("go").onclick = () => {
   try {
@@ -639,7 +656,7 @@ function doSearch() {
   $("r-note").textContent = fill === "random" || pos === "random"
     ? "周圍的字是隨機的，所以每找一次都會落在不同的一頁。這段文字在館裡出現的次數，多到寫不出來。"
     : "這是唯一一頁「只有這段文字、其餘全是空白」的書頁。不管誰、在什麼時候來找，都是這一頁。";
-  $("result").hidden = false;
+  $("result").hidden = false; $("r-msg").textContent = "";
 }
 $("find").onclick = doSearch;
 $("r-again").onclick = () => {
@@ -647,6 +664,7 @@ $("r-again").onclick = () => {
   doSearch();
 };
 $("r-open").onclick = () => openAt(lastSearch.a, lastSearch.hl);
+$("r-share").onclick = () => { const s = linkFor(lastSearch.a, lastSearch.hl); copyText(s, linkMsg(s), "r-msg"); };
 function openAt(a, hl) { location.hash = "browse"; goTo(a, hl); window.scrollTo({ top: 0 }); }
 
 // ---- 你的一生 ----
@@ -703,13 +721,13 @@ function showLife(entry, hit, fresh) {
   $("c-date").textContent = zhDate(entry.iso);
   $("c-tense").textContent = TENSE[tense];
   $("c-line").textContent = entry.line;
-  $("c-call").innerHTML = `<div>索書號 <span>${esc(shortHex(p.hex))} ・ ${p.wall}-${p.shelf}-${p.vol} ・ p.${p.page}</span></div><div>位於第 ${hit.hl[0] + 1} 字起，共 ${hit.hl[1]} 字</div>`;
+  $("c-call").innerHTML = `<div>索書號 <span>${esc(shortHex(p.hex, 64))} ・ ${p.wall}-${p.shelf}-${p.vol} ・ p.${p.page}</span></div><div>位於第 ${hit.hl[0] + 1} 字起，共 ${hit.hl[1]} 字</div>`;
   const loc = `第${zhNum(p.wall)}面牆、第${zhNum(p.shelf)}層架、第 ${p.vol} 冊、第 ${p.page} 頁`;
   $("l-verdict").textContent = VERDICT[tense](loc);
   $("l-fine").textContent = fresh
     ? "這一頁只有這句話，其餘全是空白，所以它是唯一的，任何人在任何時候來查，都會被帶到同一個位置。按「換一個上下文」，會看到同一句話夾在別的字中間的另一頁；那樣的頁數多到數不完，有些寫對了前後文，有些沒有。"
     : "這是同一句話，夾在一段隨機的上下文中間。館裡這樣的頁面多到數不完。";
-  $("l-result").hidden = false;
+  $("l-result").hidden = false; $("l-msg").textContent = "";
 }
 $("l-find").onclick = () => {
   const err = $("life-err"); err.textContent = "";
@@ -730,6 +748,7 @@ $("l-other").onclick = () => {
   $("l-keep").disabled = false; $("l-keep").textContent = "收進我的索引";
 };
 $("l-open").onclick = () => lifeHit && openAt(lifeHit.a, lifeHit.hl);
+$("l-share").onclick = () => { if (!lifeHit) return; const s = linkFor(lifeHit.a, lifeHit.hl); copyText(s, linkMsg(s), "l-msg"); };
 $("l-keep").onclick = () => {
   if (!lifeHit) return;
   const list = loadLedger();
@@ -788,17 +807,22 @@ function show(tab) {
   for (const id of TABS) $(id).hidden = id !== tab;
   document.querySelectorAll(".mast nav a").forEach((a) => (a.dataset.tab === tab ? a.setAttribute("aria-current", "page") : a.removeAttribute("aria-current")));
   document.querySelector(".thesis").hidden = tab !== "browse";
+  syncURL();
 }
 function route() {
   const h = decodeURIComponent(location.hash.slice(1));
-  if (h.startsWith("p/")) {
+  if (h.startsWith("p/")) {     // 11/23 第一版的連結：館已重新編排，位址不再相同
+    show("browse"); goTo(randomBelow(M));
+    $("note").textContent = "這是舊版的連結。11 月 24 日館藏重新編排過，舊位址已經對不到原本那一頁了，先帶你到隨機的一頁。";
+    return true;
+  }
+  if (h.startsWith("a/")) {
     show("browse");
     try {
       const [addr, hlRaw] = h.slice(2).split("~");
       const hl = hlRaw ? hlRaw.split(",").map(Number) : null;
       goTo(parseFull(addr), hl && hl.length === 2 && hl.every((n) => Number.isInteger(n) && n >= 0) && hl[0] + hl[1] <= L ? hl : null);
-      history.replaceState(null, "", "#browse");
-    } catch (e) { goTo(randomBelow(M)); $("browse-err").textContent = "連結裡的位址無法辨識：" + e.message; $("hex").closest("details").open = true; }
+    } catch (e) { goTo(randomBelow(M)); $("note").textContent = "連結裡的位置無法辨識（" + e.message + "），先帶你到隨機的一頁。"; }
     return true;
   }
   show(TABS.includes(h) ? h : "browse");

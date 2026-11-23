@@ -52,10 +52,13 @@ function parseBase36(s) {
 // ---- 圖書館的大小 ----
 const M = N ** BigInt(L);            // 總頁數
 const K = bitLength(M);              // 位元寬度
-const S = Math.ceil(K / 2);          // xorshift 位移（2S ≥ K，自反）
 const MAX_HEX = (M + PER_HEX - 1n) / PER_HEX;
 
-// ---- 固定的置亂常數（決定論：每個訪客看到同一座圖書館）----
+// ---- 分層置亂 ----
+// 一頁的「長度」n = 最後一個非空白字的位置（全空白的那一頁 n = 0）。
+// 頁面內容看成小端序整數 C，長度 n 的頁面恰好是 [N^(n-1), N^n) 這一段；
+// 位址也用同一段，段內再做一個固定的置換。所以：
+//   每一頁仍然剛好出現一次；內容越短，位址越小、室號越短；相鄰位址的內容彼此無關。
 function sfc32(a, b, c, d) {
   return function () {
     a >>>= 0; b >>>= 0; c >>>= 0; d >>>= 0;
@@ -66,40 +69,69 @@ function sfc32(a, b, c, d) {
     return t >>> 0;
   };
 }
-const rng = sfc32(0x5df1a3c7, 0x9e3779b9, 0x1941b0e5, 0x0b0b0e1a); // 1941：〈巴別圖書館〉發表年
-function constK() {
-  let hex = "";
-  while (hex.length * 4 < K) hex += rng().toString(16).padStart(8, "0");
-  return BigInt.asUintN(K, BigInt("0x" + hex)) | 1n;
-}
-function invMod2k(a) {               // 牛頓法求 a⁻¹ mod 2^K
+function invMod2k(a, k) {            // 牛頓法求 a⁻¹ mod 2^k
   let x = a, bits = 3;
-  while (bits < K) { x = BigInt.asUintN(K, x * (2n - a * x)); bits *= 2; }
-  return BigInt.asUintN(K, x * (2n - a * x));
+  while (bits < k) { x = BigInt.asUintN(k, x * (2n - a * x)); bits *= 2; }
+  return BigInt.asUintN(k, x * (2n - a * x));
 }
-const MULS = [constK(), constK(), constK(), constK()];
-const INVS = MULS.map(invMod2k);
-const ADD = constK();
-
-const mul = (x, a) => BigInt.asUintN(K, x * a);
-const xs = (x) => x ^ (x >> BigInt(S));
-function g(x) {
-  x = mul(x, MULS[0]); x = xs(x);
-  x = BigInt.asUintN(K, x + ADD);
-  x = mul(x, MULS[1]); x = xs(x);
-  x = mul(x, MULS[2]); x = xs(x);
-  return mul(x, MULS[3]);
+// [0, 2^k) 上的置換：交替「乘奇數常數 mod 2^k」與「x ^ (x >> ⌈k/2⌉)」。常數由 k 決定，每個訪客都一樣。
+const permMemo = new Map();
+function permFor(k) {
+  let P = permMemo.get(k);
+  if (P) return P;
+  const rng = sfc32(0x5df1a3c7, 0x9e3779b9, 0x1941b0e5 ^ k, 0x0b0b0e1a); // 1941：〈巴別圖書館〉發表年
+  for (let i = 0; i < 8; i++) rng();
+  const constK = () => {
+    let hex = "";
+    while (hex.length * 4 < k) hex += rng().toString(16).padStart(8, "0");
+    return BigInt.asUintN(k, BigInt("0x" + hex)) | 1n;
+  };
+  const MULS = [constK(), constK(), constK(), constK()];
+  const INVS = MULS.map((a) => invMod2k(a, k));
+  const ADD = constK() >> 1n;
+  const S = BigInt(Math.ceil(k / 2));
+  const mul = (x, a) => BigInt.asUintN(k, x * a);
+  const xs = (x) => x ^ (x >> S);
+  P = {
+    f(x) {
+      x = mul(x, MULS[0]); x = xs(x);
+      x = BigInt.asUintN(k, x + ADD);
+      x = mul(x, MULS[1]); x = xs(x);
+      x = mul(x, MULS[2]); x = xs(x);
+      return mul(x, MULS[3]);
+    },
+    inv(x) {
+      x = mul(x, INVS[3]);
+      x = xs(x); x = mul(x, INVS[2]);
+      x = xs(x); x = mul(x, INVS[1]);
+      x = BigInt.asUintN(k, x - ADD);
+      x = xs(x); return mul(x, INVS[0]);
+    },
+  };
+  permMemo.set(k, P);
+  return P;
 }
-function gInv(x) {
-  x = mul(x, INVS[3]);
-  x = xs(x); x = mul(x, INVS[2]);
-  x = xs(x); x = mul(x, INVS[1]);
-  x = BigInt.asUintN(K, x - ADD);
-  x = xs(x); return mul(x, INVS[0]);
+function layerBounds(n) {            // 長度 n 的頁面所佔的區段 [lo, hi)
+  return n === 0 ? [0n, 1n] : [pow(N, n - 1), pow(N, n)];
 }
-// 循環行走：把 [0, 2^K) 上的置換限制到 [0, M)
-function contentToAddr(c) { let x = g(c); while (x >= M) x = g(x); return x; }
-function addrToContent(a) { let x = gInv(a); while (x >= M) x = gInv(x); return x; }
+function layerOfAddr(a) {            // 二分搜尋：a 落在哪一層
+  if (a === 0n) return 0;
+  let lo = 1, hi = L;
+  while (lo < hi) { const mid = (lo + hi) >> 1; if (a < pow(N, mid)) hi = mid; else lo = mid + 1; }
+  return lo;
+}
+// 段內置換：在 2^k 上置換，用 cycle walking 限制回 [0, size)
+function permuteIn(n, x, inverse) {
+  const [lo, hi] = layerBounds(n), size = hi - lo;
+  if (size === 1n) return x;
+  const P = permFor(bitLength(size - 1n)), step = inverse ? P.inv : P.f;
+  let y = step(x - lo);
+  while (y >= size) y = step(y);
+  return lo + y;
+}
+function contentToAddrN(c, n) { return permuteIn(n, c, false); }
+function contentToAddr(c) { return contentToAddrN(c, layerOfAddr(c)); }
+function addrToContent(a) { return permuteIn(layerOfAddr(a), a, true); }
 
 // ---- 頁面 <-> 位址 ----
 function pageAt(a) {
@@ -111,7 +143,8 @@ function pageAt(a) {
 function addrOfText(text) {         // text 長度須為 L，且都在字集中
   const chars = Array.from(text);
   const d = chars.map((c) => INDEX.get(c));
-  return contentToAddr(digitsToBig(d, N));
+  let n = d.length; while (n > 0 && d[n - 1] === 0) n--;   // 最後一個非空白字
+  return contentToAddrN(digitsToBig(d, N), n);
 }
 function splitAddr(a) {
   let loc = Number(a % PER_HEX);
@@ -155,5 +188,5 @@ function unsupported(text) {
 
 if (typeof module !== "undefined") module.exports = {
   ALPHABET, N, L, M, K, MAX_HEX, PER_HEX, pageAt, addrOfText, splitAddr, joinAddr,
-  contentToAddr, addrToContent, parseBase36, randomBelow, normalize, unsupported, digitsToBig, bigToDigits,
+  contentToAddr, addrToContent, layerOfAddr, parseBase36, randomBelow, normalize, unsupported, digitsToBig, bigToDigits,
 };
