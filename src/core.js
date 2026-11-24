@@ -54,11 +54,10 @@ const M = N ** BigInt(L);            // 總頁數
 const K = bitLength(M);              // 位元寬度
 const MAX_HEX = (M + PER_HEX - 1n) / PER_HEX;
 
-// ---- 分層置亂 ----
-// 一頁的「長度」n = 最後一個非空白字的位置（全空白的那一頁 n = 0）。
-// 頁面內容看成小端序整數 C，長度 n 的頁面恰好是 [N^(n-1), N^n) 這一段；
-// 位址也用同一段，段內再做一個固定的置換。所以：
-//   每一頁仍然剛好出現一次；內容越短，位址越小、室號越短；相鄰位址的內容彼此無關。
+// ---- 置亂 ----
+// 頁面內容看成小端序整數 C ∈ [0, M)，位址 A = f(C)，f 是整個 [0, M) 上一個固定的置換。
+// 不分長短一起打散：一句話的頁面和寫滿的頁面，位址一樣是 [0, M) 裡隨便一個數，
+// 室號再補零到固定位數，所以每個網址都一樣長。每一頁仍然剛好出現一次；相鄰位址的內容彼此無關。
 function sfc32(a, b, c, d) {
   return function () {
     a >>>= 0; b >>>= 0; c >>>= 0; d >>>= 0;
@@ -74,7 +73,7 @@ function invMod2k(a, k) {            // 牛頓法求 a⁻¹ mod 2^k
   while (bits < k) { x = BigInt.asUintN(k, x * (2n - a * x)); bits *= 2; }
   return BigInt.asUintN(k, x * (2n - a * x));
 }
-// [0, 2^k) 上的置換：交替「乘奇數常數 mod 2^k」與「x ^ (x >> ⌈k/2⌉)」。常數由 k 決定，每個訪客都一樣。
+// [0, 2^k) 上的置換：交替「乘奇數常數 mod 2^k」與「x ^ (x >> ⌈k/2⌉)」。常數由固定種子與 k 決定，每個訪客都一樣。
 const permMemo = new Map();
 function permFor(k) {
   let P = permMemo.get(k);
@@ -111,27 +110,20 @@ function permFor(k) {
   permMemo.set(k, P);
   return P;
 }
-function layerBounds(n) {            // 長度 n 的頁面所佔的區段 [lo, hi)
-  return n === 0 ? [0n, 1n] : [pow(N, n - 1), pow(N, n)];
-}
-function layerOfAddr(a) {            // 二分搜尋：a 落在哪一層
-  if (a === 0n) return 0;
-  let lo = 1, hi = L;
-  while (lo < hi) { const mid = (lo + hi) >> 1; if (a < pow(N, mid)) hi = mid; else lo = mid + 1; }
-  return lo;
-}
-// 段內置換：在 2^k 上置換，用 cycle walking 限制回 [0, size)
-function permuteIn(n, x, inverse) {
-  const [lo, hi] = layerBounds(n), size = hi - lo;
-  if (size === 1n) return x;
+// [0, size) 上的置換：在 2^k（k = size−1 的位元數）上置換，用 cycle walking 限制回 [0, size)
+function permuteBelow(x, size, inverse) {
+  if (size <= 1n) return x;
   const P = permFor(bitLength(size - 1n)), step = inverse ? P.inv : P.f;
-  let y = step(x - lo);
+  let y = step(x);
   while (y >= size) y = step(y);
-  return lo + y;
+  return y;
 }
-function contentToAddrN(c, n) { return permuteIn(n, c, false); }
-function contentToAddr(c) { return contentToAddrN(c, layerOfAddr(c)); }
-function addrToContent(a) { return permuteIn(layerOfAddr(a), a, true); }
+function contentToAddr(c) { return permuteBelow(c, M, false); }
+function addrToContent(a) { return permuteBelow(a, M, true); }
+
+// 室號固定位數：補零到最大室號的長度
+const HEX_DIGITS = (MAX_HEX - 1n).toString(36).length;
+function hexStr(h) { return h.toString(36).padStart(HEX_DIGITS, "0"); }
 
 // ---- 頁面 <-> 位址 ----
 function pageAt(a) {
@@ -142,9 +134,7 @@ function pageAt(a) {
 }
 function addrOfText(text) {         // text 長度須為 L，且都在字集中
   const chars = Array.from(text);
-  const d = chars.map((c) => INDEX.get(c));
-  let n = d.length; while (n > 0 && d[n - 1] === 0) n--;   // 最後一個非空白字
-  return contentToAddrN(digitsToBig(d, N), n);
+  return contentToAddr(digitsToBig(chars.map((c) => INDEX.get(c)), N));
 }
 function splitAddr(a) {
   let loc = Number(a % PER_HEX);
@@ -188,5 +178,5 @@ function unsupported(text) {
 
 if (typeof module !== "undefined") module.exports = {
   ALPHABET, N, L, M, K, MAX_HEX, PER_HEX, pageAt, addrOfText, splitAddr, joinAddr,
-  contentToAddr, addrToContent, layerOfAddr, parseBase36, randomBelow, normalize, unsupported, digitsToBig, bigToDigits,
+  contentToAddr, addrToContent, permuteBelow, HEX_DIGITS, hexStr, parseBase36, randomBelow, normalize, unsupported, digitsToBig, bigToDigits,
 };
