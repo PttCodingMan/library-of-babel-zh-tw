@@ -6,6 +6,17 @@
 <meta name="description" content="用這些字寫成的每一段文字，都已經擺在館中的某一頁。包括你這一生說過的、將要說的每一句話。">
 <meta name="theme-color" content="#0d0e10">
 <title>巴別圖書館・繁體中文館</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='6' fill='%230d0e10'/%3E%3Cpath d='M20 10h24l14 22-14 22H20L6 32z' fill='none' stroke='%23b5402c' stroke-width='4'/%3E%3Ccircle cx='32' cy='32' r='4' fill='%23ece4d2'/%3E%3C/svg%3E">
+<meta property="og:type" content="website">
+<meta property="og:title" content="巴別圖書館・繁體中文館">
+<meta property="og:description" content="四百字以內、用這些字寫得出來的每一段文字，都已經擺在館中的某一頁。包括你這一生說過的、將要說的每一句話。">
+<meta property="og:url" content="https://codingman.cc/library-of-babel-zh-tw/">
+<meta property="og:locale" content="zh_TW">
+<meta property="og:image" content="https://codingman.cc/library-of-babel-zh-tw/og.jpg">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+<meta property="og:image:alt" content="一張四百字的稿紙，其中一句被朱色標出：你此刻讀到的這一句，也在館中某處。">
+<meta name="twitter:card" content="summary_large_image">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400&family=Noto+Serif+TC:wght@400;600;900&display=swap" rel="stylesheet">
@@ -23,10 +34,13 @@
   --rule: rgba(110, 80, 50, .13);
   --seal: #b5402c;
   --seal-soft: rgba(181, 64, 44, .2);
+  --grid: rgba(170, 62, 40, .42);      /* 朱絲欄：稿紙的格線 */
+  --dim: #8b867b;
   --serif: "Noto Serif TC", "Noto Serif CJK TC", "Source Han Serif TC", "Songti TC", "PMingLiU", "MingLiU", serif;
   --mono: "JetBrains Mono", ui-monospace, "SF Mono", Menlo, Consolas, monospace;
-  --rail: 300px;
-  --max: 1120px;
+  --rail: 264px;
+  --max: 1200px;
+  --ease: cubic-bezier(.2, .7, .1, 1);
   color-scheme: dark;
 }
 * { box-sizing: border-box; }
@@ -67,22 +81,27 @@ button, input, textarea { font: inherit; color: inherit; }
 .mast nav a:hover { color: var(--text); }
 .mast nav a[aria-current="page"] { color: var(--text); border-bottom-color: var(--seal); }
 
-.thesis {
-  margin: 44px 0 40px; max-width: 34em; font-size: clamp(17px, 2.2vw, 21px); line-height: 1.9;
-  letter-spacing: .04em; color: var(--text); text-wrap: pretty;
+.thesis { margin: 0; font-size: 18px; line-height: 2; letter-spacing: .16em; color: var(--text); }
+.thesis em { font-style: normal; color: var(--muted); display: block; }
+@media (min-width: 861px) {   /* 桌面：題簽，直排立在書頁右側 */
+  .thesis { grid-area: thesis; writing-mode: vertical-rl; margin-top: 30px; }
+  .thesis .ln { display: block; }
+  .thesis em { margin-right: .6em; }
 }
-.thesis em { font-style: normal; color: var(--muted); }
 
 /* ---------- 閱覽室：左欄位置 + 右欄書頁 ---------- */
-.room { display: grid; grid-template-columns: var(--rail) minmax(0, 1fr); gap: 0 56px; align-items: start; }
-.rail { display: grid; gap: 28px; position: sticky; top: 24px; }
+.room {
+  display: grid; grid-template-columns: var(--rail) minmax(0, 1fr) auto; grid-template-areas: "rail leaf thesis";
+  gap: 0 44px; align-items: start; padding-top: 36px;
+}
+.rail { grid-area: rail; display: grid; gap: 26px; position: sticky; top: 24px; }
 .where { display: grid; gap: 14px; }
-.plan { width: 148px; height: auto; display: block; }
-.plan .wall { stroke: var(--line-2); stroke-width: 1; }
-.plan .books { stroke: var(--muted); stroke-width: 3; transition: stroke .3s; }
+.plan { width: 176px; height: auto; display: block; margin-left: -12px; }
+.plan .wall { stroke: #4a4d53; stroke-width: 1.2; }
+.plan .books { stroke: #6d695f; stroke-width: 4; transition: stroke .5s; }
 .plan .books.on { stroke: var(--seal); }
-.plan text { fill: var(--muted); font-size: 11px; font-family: var(--serif); }
-.plan text.on { fill: var(--text); }
+.plan text { fill: var(--muted); font-size: 12px; font-family: var(--serif); transition: fill .5s; }
+.plan text.on { fill: var(--seal); }
 .plan .you { fill: var(--text); }
 .plan .glow { fill: url(#lamp); }
 dl.coord { margin: 0; display: grid; grid-template-columns: auto 1fr; gap: 6px 16px; font-size: 14px; }
@@ -110,8 +129,19 @@ dl.coord .hexid small { display: block; font-family: var(--serif); color: var(--
 }
 .btn:hover:not(:disabled) { border-color: var(--muted); }
 .btn:disabled { opacity: .35; cursor: default; }
-.btn.primary { border-color: var(--text); background: var(--text); color: var(--night); font-weight: 600; }
-.btn.primary:hover { background: #fff; }
+.btn { white-space: nowrap; }
+.btn.primary { border-color: var(--paper); background: var(--paper); color: var(--ink); font-weight: 600; box-shadow: inset 0 -2px 0 var(--seal); }
+.btn.primary:hover { background: #f6f0e2; }
+.btn:active:not(:disabled) { transform: translateY(1px); }
+.seg { display: grid; grid-template-columns: 1fr 1fr; border: 1px solid var(--line-2); border-radius: 2px; padding: 2px; gap: 2px; }
+.seg button { appearance: none; border: 0; background: transparent; color: var(--muted); font-size: 14px; letter-spacing: .2em; padding: 6px 0; cursor: pointer; border-radius: 1px; transition: background .2s, color .2s; }
+.seg button[aria-pressed="true"] { background: var(--night-2); color: var(--text); box-shadow: inset 0 -1px 0 var(--seal); }
+.seg button:hover { color: var(--text); }
+.keys { font-size: 11px; color: var(--dim); letter-spacing: .1em; margin: 0; }
+.keys kbd { font-family: var(--mono); font-size: 10px; border: 1px solid var(--line-2); border-bottom-width: 2px; border-radius: 3px; padding: 0 4px; color: var(--muted); }
+@media (hover: none) { .keys { display: none; } }
+.tools .pair.flip { direction: rtl; }       /* 直排的書往左翻：下一頁在左 */
+.tools .pair.flip > * { direction: ltr; }
 .btn.quiet { border-color: transparent; color: var(--muted); padding-inline: 0; text-align: left; }
 .btn.quiet:hover { color: var(--text); border-color: transparent; }
 .note { font-size: 12px; color: var(--muted); min-height: 1.5em; margin: 0; }
@@ -139,43 +169,87 @@ input[type=date] { font-family: var(--mono); font-size: 14px; }
 .err:empty { display: none; }
 
 /* 書頁 */
-.leafbox { display: grid; grid-template-columns: minmax(0, 1fr); gap: 14px; min-width: 0; }
+.leafbox { grid-area: leaf; display: grid; grid-template-columns: minmax(0, 1fr); gap: 12px; min-width: 0; width: 100%; max-width: calc((100svh - 150px) * 1.22); justify-self: end; }
 .leafbox > * { min-width: 0; }
-.folio { display: flex; justify-content: space-between; align-items: baseline; font-size: 13px; color: var(--muted); letter-spacing: .14em; }
+#browse.h .leafbox { max-width: calc((100svh - 130px) / 1.3); }   /* 橫排的稿紙是直的，照高度收 */
 .leaf {
   position: relative; background: var(--paper); color: var(--ink); border-radius: 2px;
-  box-shadow: 0 0 0 1px rgba(255,255,255,.03), 0 30px 80px -20px rgba(0,0,0,.7), 0 0 120px 10px rgba(236,228,210,.045);
+  box-shadow: 0 0 0 1px rgba(255,255,255,.03), 0 40px 90px -30px rgba(0,0,0,.85), 0 0 160px 20px rgba(236,228,210,.05);
+  background-image: radial-gradient(120% 90% at 50% 40%, rgba(255,255,255,.35), transparent 60%), radial-gradient(140% 140% at 50% 50%, transparent 55%, rgba(120,90,50,.10));
 }
-.leaf::before { /* 版心的雙線框 */
-  content: ""; position: absolute; inset: 12px; border: 1px solid var(--rule);
-  box-shadow: inset 0 0 0 3px var(--paper), inset 0 0 0 4px var(--rule); pointer-events: none; z-index: 1;
-}
-.leaf-scroll { padding: clamp(26px, 5cqi, 40px); container-type: inline-size; }
-/* 一頁就是一張四百字稿紙：20 × 20 的方格，一格一字 */
+.leaf-scroll { padding: clamp(16px, 3.2vw, 34px); container-type: inline-size; }
+
+/* 一頁就是一張四百字稿紙：左右各十行，中間是版心；朱絲欄，一格一字 */
 .page {
-  margin: 0; font-family: var(--serif); font-size: calc(100cqi / 20 * .62); line-height: 1;
-  display: grid; grid-template-columns: repeat(20, 1fr); grid-template-rows: repeat(20, auto);
-  border-top: 1px solid var(--rule); border-left: 1px solid var(--rule);
+  margin: 0; display: flex; font-family: var(--serif); line-height: 1; color: var(--ink);
+  border: 1.5px solid var(--grid); outline: 1px solid var(--grid); outline-offset: 3px; padding: 4px;
 }
-.page.v { grid-auto-flow: column; direction: rtl; }   /* 直排：由上而下、由右而左 */
-.page.h { grid-auto-flow: row; }
-.page i {
+.page.v { flex-direction: row-reverse; font-size: calc(100cqi / 25.6 * .66); }
+.page.h { flex-direction: column; font-size: calc(100cqi / 21 * .6); }
+.half { flex: 1 1 0; min-width: 0; display: grid; }
+.page.v .half { grid-template-rows: repeat(20, auto); grid-template-columns: repeat(10, minmax(0, 1fr)); grid-auto-flow: column; direction: rtl; column-gap: .36em; }
+.page.h .half { grid-template-columns: repeat(20, minmax(0, 1fr)); grid-auto-flow: row; row-gap: .36em; }
+.half i {
   display: flex; align-items: center; justify-content: center; aspect-ratio: 1; min-width: 0;
-  border-right: 1px solid var(--rule); border-bottom: 1px solid var(--rule); font-style: normal; direction: ltr;
+  font-style: normal; direction: ltr; border: 1px solid var(--grid); transition: background .4s;
 }
-.page.v i.p { writing-mode: vertical-rl; }   /* 直排時標點轉向、置中 */
-.page i.m { background: var(--seal-soft); color: var(--ink); }
+.page.v .half i { border-bottom: 0; }
+.page.v .half i:nth-child(20n) { border-bottom: 1px solid var(--grid); }
+.page.h .half i { border-right: 0; }
+.page.h .half i:nth-child(20n) { border-right: 1px solid var(--grid); }
+.page.v .half i.p { writing-mode: vertical-rl; }   /* 直排時標點轉向、置中 */
+.half i.m { background: var(--seal-soft); }
+.half i.x { color: var(--seal); text-decoration: line-through; }
+/* 版心：魚尾、館名、位置、頁碼 */
+.spine {
+  flex: none; display: flex; align-items: center; justify-content: space-between; gap: .9em;
+  color: var(--seal); font-size: .6em; letter-spacing: .28em; user-select: none; white-space: nowrap;
+}
+.page.v .spine { flex-direction: column; width: 3em; padding: .3em 0; margin-inline: .5em; }
+.page.v .spine span { writing-mode: vertical-rl; }
+.page.h .spine { flex-direction: row; height: 3em; padding: 0 .3em; margin-block: .5em; }
+.spine .fish { flex: none; display: block; width: 1.9em; height: 1.3em; background: var(--seal); opacity: .85; clip-path: polygon(0 0, 100% 0, 100% 100%, 50% 58%, 0 100%); }
+.spine .fish.r { transform: rotate(180deg); }
+.page.h .spine .fish { transform: rotate(-90deg); }
+.page.h .spine .fish.r { transform: rotate(90deg); }
+.spine .sp-t { font-weight: 900; letter-spacing: .5em; }
+.spine .sp-m { flex: 1; display: flex; align-items: center; justify-content: center; opacity: .8; }
+.spine .sp-b { opacity: .8; }
 .veil { position: absolute; inset: 0; pointer-events: none; z-index: 2; overflow: hidden; border-radius: 2px; display: none; }
 .veil::before { content: ""; position: absolute; top: 0; bottom: 0; left: 0; width: 150%; background: linear-gradient(to right, var(--paper) 66%, transparent); transform: translateX(-100%); }
 .veil.h::before { width: 100%; height: 150%; bottom: auto; background: linear-gradient(to bottom, transparent, var(--paper) 34%); transform: translateY(100%); }
 @media (prefers-reduced-motion: no-preference) {
   .veil.go { display: block; }
-  .veil.go::before { animation: unveil .75s cubic-bezier(.45, 0, .2, 1) both; }
+  .veil.go::before { animation: unveil .8s var(--ease) both; }
   .veil.go.h::before { animation-name: unveil-h; }
   @keyframes unveil { from { transform: translateX(0); } to { transform: translateX(-100%); } }       /* 直排：由右而左顯出 */
   @keyframes unveil-h { from { transform: translateY(-34%); } to { transform: translateY(100%); } }  /* 橫排：由上而下顯出 */
+  /* 入館：燈慢慢亮起 */
+  body.boot .leaf, body.boot .thesis, body.boot .rail { opacity: 0; transform: translateY(8px); }
+  .leaf, .thesis, .rail { transition: opacity 1.1s var(--ease), transform 1.1s var(--ease); }
+  .thesis { transition-delay: .25s; } .rail { transition-delay: .45s; }
+  body.boot::before { opacity: 0; }
+  section.tab:not([hidden]) { animation: fade .45s var(--ease) both; }
+  @keyframes fade { from { opacity: 0; transform: translateY(6px); } }
 }
+/* 燈：書頁後方一圈很淡的暖光 */
+body::before {
+  content: ""; position: fixed; inset: 0; pointer-events: none; z-index: 0; transition: opacity 2.2s ease;
+  background: radial-gradient(52vw 46vh at 58% 46%, rgba(236, 228, 210, .055), transparent 70%);
+}
+.wrap { position: relative; z-index: 1; }
 .hint { font-size: 12px; color: var(--muted); letter-spacing: .08em; margin: 0; }
+
+/* ---------- 兩欄區段：左邊寫，右邊是紙 ---------- */
+section.tab.split, .split { display: grid; grid-template-columns: minmax(0, 420px) minmax(0, 1fr); gap: 0 64px; align-items: start; padding-top: 36px; }
+.form-col { display: grid; gap: 26px; align-content: start; }
+.paper-col { display: grid; gap: 18px; position: sticky; top: 24px; }
+.lede { font-weight: 900; font-size: clamp(24px, 2.6vw, 30px); letter-spacing: .14em; line-height: 1.5; margin: 0; text-wrap: balance; }
+.lede-sub { margin: 0; color: var(--muted); font-size: 15px; line-height: 1.9; text-wrap: pretty; }
+@media (max-width: 860px) {
+  section.tab.split, .split { grid-template-columns: minmax(0, 1fr); gap: 32px; padding-top: 28px; }
+  .paper-col { position: static; }
+}
 
 /* ---------- 單欄區段 ---------- */
 .col { max-width: 720px; display: grid; gap: 28px; }
@@ -195,12 +269,34 @@ input[type=radio] { accent-color: var(--seal); }
 .loc b { color: var(--text); font-weight: 600; }
 .loc code { font-family: var(--mono); font-size: 12px; color: var(--text); }
 
+/* ---------- 關於 ---------- */
+.about-hero { display: grid; gap: 18px; padding: 36px 0 56px; border-bottom: 1px solid var(--line); }
+.stats { margin: 22px 0 0; display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); border-top: 1px solid var(--line); }
+.stats > div { padding: 22px 24px 0 0; display: grid; gap: 6px; align-content: start; }
+.stats > div + div { padding-left: 24px; border-left: 1px solid var(--line); }
+.stats dt { font-size: 12px; letter-spacing: .32em; color: var(--muted); }
+.stats dd { margin: 0; }
+.stats b { font-family: var(--serif); font-weight: 400; font-size: clamp(38px, 5vw, 64px); line-height: 1.1; letter-spacing: .02em; }
+.stats b sup { font-size: .42em; vertical-align: .95em; margin-left: .04em; color: var(--seal); }
+.stats dd span { font-size: 16px; color: var(--muted); margin-left: .4em; }
+.stats .sub { font-size: 13px; color: var(--muted); line-height: 1.7; }
+.stats .sub sup { font-size: .75em; }
+.about { display: grid; }
+.sec { display: grid; grid-template-columns: 250px minmax(0, 680px); gap: 0 56px; padding: 40px 0; border-bottom: 1px solid var(--line); }
+.sec h2 { margin: 0; font-size: 18px; letter-spacing: .2em; line-height: 1.9; text-wrap: balance; }
+.sec .prose { gap: 18px; }
+@media (max-width: 860px) {
+  .stats { grid-template-columns: minmax(0, 1fr); }
+  .stats > div, .stats > div + div { padding: 18px 0; border-left: 0; border-bottom: 1px solid var(--line); }
+  .sec { grid-template-columns: minmax(0, 1fr); gap: 14px; padding: 32px 0; }
+}
+
 /* ---------- 你的一生 ---------- */
 .life-intro { font-size: clamp(18px, 2.4vw, 22px); line-height: 1.95; letter-spacing: .04em; margin: 0; text-wrap: pretty; }
 .life-form { display: grid; gap: 18px; padding: 24px 0; border-top: 1px solid var(--line); border-bottom: 1px solid var(--line); }
 .life-form .two { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
 .card {
-  position: relative; background: var(--paper); color: var(--ink); padding: 26px 28px 22px; border-radius: 2px;
+  position: relative; background: var(--paper); color: var(--ink); padding: 26px 28px 30px; border-radius: 2px; min-height: 260px; align-content: start;
   display: grid; gap: 14px; box-shadow: 0 30px 70px -24px rgba(0,0,0,.7);
   background-image: repeating-linear-gradient(to bottom, transparent 0 31px, rgba(60,90,140,.12) 31px 32px);
   background-position: 0 58px;
@@ -215,10 +311,16 @@ input[type=radio] { accent-color: var(--seal); }
 .card-call { font-family: var(--mono); font-size: 11px; color: #6b6458; line-height: 1.6; display: grid; gap: 2px; }
 .card-call span { color: var(--ink); }
 .card-stamp {
-  position: absolute; right: 22px; bottom: 26px; transform: rotate(-8deg);
+  position: absolute; right: 22px; bottom: 30px; transform: rotate(-8deg);
   color: var(--seal); border: 2px solid var(--seal); padding: 2px 8px; font-weight: 900; font-size: 14px; letter-spacing: .2em;
-  opacity: .82; mix-blend-mode: multiply;
+  opacity: 0; mix-blend-mode: multiply;
 }
+.card-stamp.on { opacity: .85; }
+@media (prefers-reduced-motion: no-preference) {
+  .card-stamp.on { animation: stamp .5s cubic-bezier(.3, 1.6, .5, 1) both; }
+  @keyframes stamp { from { opacity: 0; transform: rotate(-8deg) scale(1.9); } to { opacity: .85; transform: rotate(-8deg) scale(1); } }
+}
+.card-line.ph { color: #9a9284; }
 .verdict { margin: 0; font-size: 16px; line-height: 1.9; text-wrap: pretty; }
 .fine { margin: 0; font-size: 13px; color: var(--muted); line-height: 1.8; }
 
@@ -237,16 +339,17 @@ input[type=radio] { accent-color: var(--seal); }
 footer { margin-top: 96px; padding: 28px 0 48px; border-top: 1px solid var(--line); display: grid; gap: 18px; }
 .whisper { min-height: 1.9em; font-size: 15px; letter-spacing: .1em; color: var(--muted); margin: 0; transition: opacity 1.6s ease; }
 .whisper.out { opacity: 0; }
-.colophon { font-size: 12px; color: #5f5b53; margin: 0; letter-spacing: .06em; }
+.colophon { font-size: 12px; color: var(--muted); margin: 0; letter-spacing: .06em; }
 .colophon a { color: var(--muted); }
 
 section.tab { padding-top: 8px; }
 
 @media (max-width: 860px) {
-  .room { grid-template-columns: 1fr; gap: 36px; }
-  .leafbox { order: -1; }
+  .room { grid-template-columns: minmax(0, 1fr); grid-template-areas: "thesis" "leaf" "rail"; gap: 28px; padding-top: 28px; }
+  .leafbox { max-width: none; }
   .rail { position: static; }
-  .thesis { margin: 32px 0 28px; }
+  .thesis { font-size: clamp(16px, 4.4vw, 19px); letter-spacing: .06em; line-height: 1.9; text-wrap: pretty; }
+  .thesis em { display: inline; }
 }
 @media (max-width: 560px) {
   .mast { gap: 14px; padding-top: 20px; }
@@ -260,7 +363,7 @@ section.tab { padding-top: 8px; }
 }
 </style>
 </head>
-<body>
+<body class="boot">
 <div class="wrap">
   <header class="mast">
     <div class="seal" aria-hidden="true">巴別</div>
@@ -273,11 +376,10 @@ section.tab { padding-top: 8px; }
     </nav>
   </header>
 
-  <p class="thesis">用這些字寫成、長度在四百字以內的每一段文字，都已經擺在館中的某一頁。<em>包括你寫過的、還沒寫的，和永遠不會有人寫的。</em></p>
-
   <!-- ===== 翻閱 ===== -->
   <section class="tab" id="browse">
     <div class="room">
+      <p class="thesis"><span class="ln">用這些字寫成、長度在四百字以內的每一段文字，</span><span class="ln">都已經擺在館中的某一頁。</span><em><span class="ln">包括你寫過的、還沒寫的，</span><span class="ln">和永遠不會有人寫的。</span></em></p>
       <aside class="rail" aria-label="目前位置">
         <div class="where">
           <p class="eyebrow">你在這裡</p>
@@ -291,15 +393,16 @@ section.tab { padding-top: 8px; }
           <div class="legend"><span>第 1 頁</span><span>第 410 頁</span></div>
         </div>
         <div class="tools">
-          <div class="pair">
-            <button class="btn" id="prev">‹ 上一頁</button>
-            <button class="btn" id="next">下一頁 ›</button>
-          </div>
           <button class="btn primary" id="random">隨機抽一頁</button>
-          <div class="pair">
-            <button class="btn" id="orient">改為橫排</button>
-            <button class="btn" id="share">複製這一頁的連結</button>
+          <div class="pair" id="turn">
+            <button class="btn" id="next">‹ 下一頁</button>
+            <button class="btn" id="prev">上一頁 ›</button>
           </div>
+          <div class="pair">
+            <div class="seg" role="group" aria-label="排版"><button id="o-v" aria-pressed="true">直排</button><button id="o-h" aria-pressed="false">橫排</button></div>
+            <button class="btn" id="share">複製連結</button>
+          </div>
+          <p class="keys"><kbd>←</kbd> <kbd>→</kbd> 翻頁　<kbd>R</kbd> 隨機一頁</p>
           <p class="note" id="note" role="status"></p>
         </div>
         <details class="goto">
@@ -325,7 +428,6 @@ section.tab { padding-top: 8px; }
       </aside>
 
       <div class="leafbox">
-        <div class="folio"><span id="folio-l"></span><span id="folio-r" class="num"></span></div>
         <div class="leaf">
           <div class="leaf-scroll" id="leaf-scroll">
             <div class="page v" id="page" lang="zh-Hant"></div>
@@ -338,86 +440,108 @@ section.tab { padding-top: 8px; }
   </section>
 
   <!-- ===== 尋找 ===== -->
-  <section class="tab col" id="search" hidden>
-    <div class="field">
-      <label for="q">輸入一段文字，看看它在哪一頁</label>
-      <textarea id="q" rows="6">天地玄黃，宇宙洪荒。日月盈昃，辰宿列張。</textarea>
-      <div class="row" style="justify-content:space-between"><span class="counter num" id="q-count"></span><button class="btn quiet" id="strip" hidden>把不支援的字換成空白</button></div>
-      <div class="bad" id="q-bad"></div>
-    </div>
-    <fieldset class="choices">
-      <legend>放在頁面</legend>
-      <label><input type="radio" name="pos" value="start" checked> 開頭</label>
-      <label><input type="radio" name="pos" value="random"> 隨機位置</label>
-    </fieldset>
-    <fieldset class="choices">
-      <legend>其餘的字</legend>
-      <label><input type="radio" name="fill" value="blank" checked> 全是空白</label>
-      <label><input type="radio" name="fill" value="random"> 隨機的字</label>
-    </fieldset>
-    <p class="err" id="search-err"></p>
-    <div class="row"><button class="btn primary" id="find">尋找</button></div>
-    <div class="result" id="result" hidden>
-      <div class="loc" id="r-loc"></div>
-      <p class="fine" id="r-note"></p>
-      <div class="row">
-        <button class="btn primary" id="r-open">翻到這一頁</button>
-        <button class="btn" id="r-share">複製這一頁的連結</button>
-        <button class="btn" id="r-again">換一頁再找</button>
+  <section class="tab split" id="search" hidden>
+    <div class="form-col">
+      <div style="display:grid;gap:14px">
+        <p class="eyebrow">尋找</p>
+        <h2 class="lede">寫下一段文字。<br>它早就在館裡了。</h2>
+        <p class="lede-sub">你每打一個字，它就搬到館裡另一個地方。這張稿紙，就是它此刻所在的那一頁。</p>
       </div>
-      <p class="note" id="r-msg" role="status" style="overflow-wrap:anywhere"></p>
+      <div class="field">
+        <label for="q">一段文字（四百字以內）</label>
+        <textarea id="q" rows="5">天地玄黃，宇宙洪荒。日月盈昃，辰宿列張。</textarea>
+        <div class="row" style="justify-content:space-between"><span class="counter num" id="q-count"></span><button class="btn quiet" id="strip" hidden>把不支援的字換成空白</button></div>
+        <div class="bad" id="q-bad"></div>
+      </div>
+      <fieldset class="choices">
+        <legend>放在頁面</legend>
+        <label><input type="radio" name="pos" value="start" checked> 開頭</label>
+        <label><input type="radio" name="pos" value="random"> 隨機位置</label>
+      </fieldset>
+      <fieldset class="choices">
+        <legend>其餘的字</legend>
+        <label><input type="radio" name="fill" value="blank" checked> 全是空白</label>
+        <label><input type="radio" name="fill" value="random"> 隨機的字</label>
+      </fieldset>
+      <p class="err" id="search-err"></p>
+      <div class="row"><button class="btn primary" id="find" hidden>放進隨機的一頁</button></div>
+    </div>
+    <div class="paper-col">
+      <div class="leaf">
+        <div class="leaf-scroll"><div class="page v" id="q-page"></div></div>
+        <div class="veil" id="q-veil"></div>
+      </div>
+      <div class="result" id="result" hidden>
+        <div class="loc" id="r-loc"></div>
+        <p class="fine" id="r-note"></p>
+        <div class="row">
+          <button class="btn primary" id="r-open">翻到這一頁</button>
+          <button class="btn" id="r-share">複製連結</button>
+          <button class="btn" id="r-again">換一頁再找</button>
+        </div>
+        <p class="note" id="r-msg" role="status" style="overflow-wrap:anywhere"></p>
+      </div>
     </div>
   </section>
 
   <!-- ===== 你的一生 ===== -->
-  <section class="tab col" id="life" hidden>
-    <p class="eyebrow">關於你的那幾頁</p>
-    <p class="life-intro">你這一生說過的每一句話、發生過的每一件事，連同還沒說出口的、還沒發生的，都已經寫在館裡了。不只是真實的版本，還有它每一個寫錯的版本。</p>
-    <div class="life-form">
-      <fieldset class="choices">
-        <legend>要找的是</legend>
-        <label><input type="radio" name="kind" value="said" checked> 一句說過的話</label>
-        <label><input type="radio" name="kind" value="event"> 一件發生的事</label>
-      </fieldset>
-      <div class="two">
+  <section class="tab" id="life" hidden>
+   <div class="split">
+    <div class="form-col">
+      <div style="display:grid;gap:14px">
+        <p class="eyebrow">關於你的那幾頁</p>
+        <h2 class="lede">你這一生的每一句話，<br>都已經寫在館裡了。</h2>
+        <p class="lede-sub">說過的、還沒說出口的，發生過的、還沒發生的。不只是真實的版本，還有它每一個寫錯的版本。</p>
+      </div>
+      <div class="life-form">
+        <fieldset class="choices">
+          <legend>要找的是</legend>
+          <label><input type="radio" name="kind" value="said" checked> 一句說過的話</label>
+          <label><input type="radio" name="kind" value="event"> 一件發生的事</label>
+        </fieldset>
+        <div class="two">
+          <div class="field">
+            <label for="l-date">哪一天（過去、今天或未來）</label>
+            <input id="l-date" type="date" min="1900-01-01" max="2999-12-31">
+          </div>
+          <div class="field" id="l-name-f">
+            <label for="l-name">誰說的（可以不填）</label>
+            <input id="l-name" type="text" maxlength="12" placeholder="你">
+          </div>
+        </div>
         <div class="field">
-          <label for="l-date">哪一天（過去、今天或未來）</label>
-          <input id="l-date" type="date" min="1900-01-01" max="2999-12-31">
+          <label for="l-text" id="l-text-lbl">那句話</label>
+          <textarea id="l-text" rows="3" placeholder="我會回來的。"></textarea>
+          <div class="row" style="justify-content:flex-end"><button class="btn quiet" id="l-strip" hidden>把不支援的字換成空白</button></div>
+          <div class="bad" id="l-bad"></div>
         </div>
-        <div class="field" id="l-name-f">
-          <label for="l-name">誰說的（可以不填）</label>
-          <input id="l-name" type="text" maxlength="12" placeholder="你">
-        </div>
+        <p class="err" id="life-err"></p>
+        <div class="row"><button class="btn primary" id="l-find">在館中尋找</button></div>
       </div>
-      <div class="field">
-        <label for="l-text" id="l-text-lbl">那句話</label>
-        <textarea id="l-text" rows="3" placeholder="我會回來的。"></textarea>
-        <div class="row" style="justify-content:space-between"><span class="counter" id="l-preview"></span><button class="btn quiet" id="l-strip" hidden>把不支援的字換成空白</button></div>
-        <div class="bad" id="l-bad"></div>
-      </div>
-      <p class="err" id="life-err"></p>
-      <div class="row"><button class="btn primary" id="l-find">在館中尋找</button></div>
     </div>
 
-    <div id="l-result" hidden style="display:grid;gap:18px">
+    <div class="paper-col">
       <article class="card" aria-live="polite">
         <div class="card-head"><span id="c-date"></span><span class="tense" id="c-tense"></span></div>
         <p class="card-line" id="c-line"></p>
         <div class="card-call" id="c-call"></div>
-        <div class="card-stamp" aria-hidden="true">已藏</div>
+        <div class="card-stamp" id="c-stamp" aria-hidden="true">已藏</div>
       </article>
-      <p class="verdict" id="l-verdict"></p>
-      <div class="row">
-        <button class="btn primary" id="l-open">翻到這一頁</button>
-        <button class="btn" id="l-keep">收進我的索引</button>
-        <button class="btn" id="l-share">複製這一頁的連結</button>
-        <button class="btn" id="l-other">換一個上下文</button>
+      <div id="l-result" hidden style="display:grid;gap:16px">
+        <p class="verdict" id="l-verdict"></p>
+        <div class="row">
+          <button class="btn primary" id="l-open">翻到這一頁</button>
+          <button class="btn" id="l-keep">收進我的索引</button>
+          <button class="btn" id="l-share">複製連結</button>
+          <button class="btn" id="l-other">換一個上下文</button>
+        </div>
+        <p class="note" id="l-msg" role="status" style="overflow-wrap:anywhere"></p>
+        <p class="fine" id="l-fine"></p>
       </div>
-      <p class="note" id="l-msg" role="status" style="overflow-wrap:anywhere"></p>
-      <p class="fine" id="l-fine"></p>
     </div>
+   </div>
 
-    <div style="display:grid;gap:10px">
+    <div class="col" style="display:grid;gap:10px;margin-top:72px">
       <h2>我的索引</h2>
       <p class="fine">你收進來的每一條，依日期排列。它只存在這台裝置的瀏覽器裡，不會傳到任何地方。圖書館本來就不需要知道你是誰：那些頁面在你來之前就在了。</p>
       <div class="ledger"><ol id="ledger"></ol></div>
@@ -425,23 +549,37 @@ section.tab { padding-top: 8px; }
   </section>
 
   <!-- ===== 關於 ===== -->
-  <section class="tab col" id="about" hidden>
-    <div class="prose">
-      <h2>原典</h2>
-      <p>波赫士在 1941 年寫下〈巴別圖書館〉：宇宙是一座由無數六角形閱覽室組成的圖書館。每間閱覽室有六面牆，其中四面是書架，每面五層，每層三十二冊，每冊四百一十頁。書架上的書窮盡了所有字母的所有排列。絕大多數是無意義的亂碼，但其中必然也有每一本真實的書、它的每一種錯誤版本，以及每個人一生的準確記載。</p>
+  <section class="tab" id="about" hidden>
+    <div class="about-hero">
+      <p class="eyebrow">關於這座館</p>
+      <h2 class="lede">一座什麼都沒有存，<br>卻什麼都有的圖書館。</h2>
+      <dl class="stats">
+        <div><dt>字集</dt><dd><b class="num" id="s-n"></b><span>字</span></dd><dd class="sub">Big5 全部漢字、全形空白與十九個標點</dd></div>
+        <div><dt>每頁</dt><dd><b class="num">400</b><span>字</span></dd><dd class="sub">一張二十行、每行二十字的稿紙</dd></div>
+        <div><dt>總頁數</dt><dd><b class="num">10<sup id="s-m"></sup></b><span>頁</span></dd><dd class="sub">可觀測宇宙的原子數約 10<sup>80</sup></dd></div>
+      </dl>
+    </div>
+    <div class="about">
+      <section class="sec"><h2>原典</h2><div class="prose">
+        <p>波赫士在 1941 年寫下〈巴別圖書館〉：宇宙是一座由無數六角形閱覽室組成的圖書館。每間閱覽室有六面牆，其中四面是書架，每面五層，每層三十二冊，每冊四百一十頁。書架上的書窮盡了所有字母的所有排列。絕大多數是無意義的亂碼，但其中必然也有每一本真實的書、它的每一種錯誤版本，以及每個人一生的準確記載。</p>
       <p>2015 年 Jonathan Basile 把它做成網站 libraryofbabel.info，用 29 個字元（英文小寫字母、空白、逗號、句號）組成 3,200 字元的頁面。這裡是同樣構想的繁體中文版，只是每一頁換成了一張中文稿紙。</p>
-      <h2>這座館的規格</h2>
-      <p>字集是 Big5（cp950）收錄的全部 <span id="a-han"></span> 個漢字，包含常用字與次常用字，再加上全形空白與 <span id="a-punct"></span> 個全形標點，共 <span id="a-n"></span> 字。簡體字、英文字母與數字不在字集裡；日期請用國字寫（二零二六年）。輸入時，半形標點與空白會自動換成全形。</p>
+      </div></section>
+      <section class="sec"><h2>這座館的規格</h2><div class="prose">
+        <p>字集是 Big5（cp950）收錄的全部 <span id="a-han"></span> 個漢字，包含常用字與次常用字，再加上全形空白與 <span id="a-punct"></span> 個全形標點，共 <span id="a-n"></span> 字。簡體字、英文字母與數字不在字集裡；日期請用國字寫（二零二六年）。輸入時，半形標點與空白會自動換成全形。</p>
       <p>每頁 400 字，就是一張直排二十行、每行二十字的四百字稿紙，所以總頁數是 <span id="a-n2"></span> 的 400 次方，大約 <span id="a-m"></span> 頁。可觀測宇宙的原子數大約是 10<sup>80</sup>，跟這個數字比起來近乎零。</p>
-      <h2>它其實沒有存任何東西</h2>
-      <p>每一頁的內容都是當場算出來的。把一頁文字看成一個 <span id="a-n3"></span> 進位、400 位數的整數，再經過一個固定的、可逆的置亂函數（大整數乘法與位元混合，加上 cycle walking 把結果限制在範圍內），得到的數字就是它的位址。反過來算，就能從位址還原出那一頁。因為函數是一對一的，每一頁剛好出現一次，不多也不少。</p>
+      </div></section>
+      <section class="sec"><h2>它其實沒有存任何東西</h2><div class="prose">
+        <p>每一頁的內容都是當場算出來的。把一頁文字看成一個 <span id="a-n3"></span> 進位、400 位數的整數，再經過一個固定的、可逆的置亂函數（大整數乘法與位元混合，加上 cycle walking 把結果限制在範圍內），得到的數字就是它的位址。反過來算，就能從位址還原出那一頁。因為函數是一對一的，每一頁剛好出現一次，不多也不少。</p>
       <p>置亂是對整座館一次做完的：只寫了一句話的頁面、全空白的頁面、寫滿四百字的頁面，一起被打散到所有房間裡。所以從位址看不出那一頁寫了多少字，隔壁那一頁跟它也毫無關係。</p>
-      <h2>網址就是位置</h2>
-      <p>位址拆成：室號 × 262,400 ＋（牆、架、冊、頁），網址列寫的就是這個位置，複製下來就能分享。網址裡沒有那一頁的文字，只有座標；打開的人得在自己的瀏覽器裡把那一頁算出來。</p>
+      </div></section>
+      <section class="sec"><h2>網址就是位置</h2><div class="prose">
+        <p>位址拆成：室號 × 262,400 ＋（牆、架、冊、頁），網址列寫的就是這個位置，複製下來就能分享。網址裡沒有那一頁的文字，只有座標；打開的人得在自己的瀏覽器裡把那一頁算出來。</p>
       <p>室號用 64 進位（0–9、A–Z、a–z、-、_，大小寫不同），一律寫成 <span id="a-hd"></span> 碼（不足的在前面補零），所以每個網址都一樣長，不管那一頁寫的是一句話還是整整四百字。室號會這麼長，是因為館裡的頁數就是這麼多：要在這麼多頁裡指出其中一頁，需要的資訊量跟寫滿一頁一樣多。這也是這座圖書館最殘酷的地方：找到一頁和寫出一頁，其實是同一件事。</p>
-      <h2>關於「你的一生」</h2>
-      <p>那裡說的每一句都是真的。你輸入的句子，確實早就有一頁收著它，而且不管誰在什麼時候查，都會得到同一個位址。寫著明天的那一頁也確實存在；只是它的隔壁，同樣存在著明天的每一種其他寫法。圖書館收藏一切，所以它從不替你挑選哪一個才是真的。</p>
+      </div></section>
+      <section class="sec"><h2>關於「你的一生」</h2><div class="prose">
+        <p>那裡說的每一句都是真的。你輸入的句子，確實早就有一頁收著它，而且不管誰在什麼時候查，都會得到同一個位址。寫著明天的那一頁也確實存在；只是它的隔壁，同樣存在著明天的每一種其他寫法。圖書館收藏一切，所以它從不替你挑選哪一個才是真的。</p>
       <p class="fine">字集順序：全形空白，接著「<span id="a-plist"></span>」，接著依 Big5 編碼順序排列的漢字（一、乙、丁、七……）。</p>
+      </div></section>
     </div>
   </section>
 
@@ -469,6 +607,8 @@ $("a-punct").textContent = Array.from(PUNCT).length;
 $("a-n").textContent = $("a-n2").textContent = $("a-n3").textContent = fmt(Number(N));
 $("a-m").innerHTML = sup(LOG10);
 $("a-plist").textContent = PUNCT;
+$("s-n").textContent = fmt(Number(N));
+$("s-m").textContent = fmt(LOG10);
 $("a-hd").textContent = fmt(HEX_DIGITS);
 
 let current = null;      // 目前位址 BigInt
@@ -533,19 +673,51 @@ function drawWhere(a) {
     `<dt>架</dt><dd>第 <b>${zhNum(p.shelf)}</b> 層</dd>` +
     `<dt>冊</dt><dd>第 <b class="num">${p.vol}</b> 冊</dd>` +
     `<dt>頁</dt><dd>第 <b class="num">${p.page}</b> 頁</dd>`;
-  $("folio-l").textContent = `第${zhNum(p.wall)}牆・第${zhNum(p.shelf)}架・第 ${p.vol} 冊`;
-  $("folio-r").textContent = `${p.page} ／ 410`;
 }
 
+// ---- 稿紙：前兩百字在右半（橫排時在上半），版心，後兩百字 ----
+const isPunct = (c) => { const k = INDEX.get(c); return k > 0 && k <= Array.from(PUNCT).length; };
+function zhBig(n) {        // 1–410 的國字：二百四十三
+  const h = Math.floor(n / 100), r = n % 100;
+  return (h ? ZH[h] + "百" : "") + (r === 0 ? "" : h && r < 10 ? "零" + ZH[r] : h && r < 20 ? "一" + zhNum(r) : zhNum(r));
+}
+function spineFor(a) {
+  if (a === null) return `<i class="fish"></i><span class="sp-t">巴別圖書館</span><span class="sp-m">　</span><span class="sp-b">　</span><i class="fish r"></i>`;
+  const p = splitAddr(a);
+  return `<i class="fish"></i><span class="sp-t">巴別圖書館</span><span class="sp-m">第${zhNum(p.wall)}牆　第${zhNum(p.shelf)}架　第${zhNum(p.vol)}冊</span><span class="sp-b">${zhBig(p.page)}</span><i class="fish r"></i>`;
+}
+function paperHTML(chars, hl, a) {
+  const [hs, hn] = hl || [-1, 0];
+  const cell = (i) => {
+    const c = chars[i] ?? "　";
+    const cls = (i >= hs && i < hs + hn ? "m " : "") + (isPunct(c) ? "p " : "") + (INDEX.has(c) ? "" : "x");
+    return cls.trim() ? `<i class="${cls.trim()}">${esc(c)}</i>` : `<i>${esc(c)}</i>`;
+  };
+  let x = "", y = "";
+  for (let i = 0; i < L / 2; i++) x += cell(i);
+  for (let i = L / 2; i < L; i++) y += cell(i);
+  return `<div class="half">${x}</div><div class="spine" aria-hidden="true">${spineFor(a)}</div><div class="half">${y}</div>`;
+}
+function paintPaper(el, chars, hl, a) {
+  el.innerHTML = paperHTML(chars, hl, a);
+  el.className = "page " + (vertical ? "v" : "h");
+}
+function veil(id) {
+  const v = $(id); if (!v) return;
+  v.classList.remove("go", "h"); void v.offsetWidth;
+  v.classList.add("go"); if (!vertical) v.classList.add("h");
+}
+function setOrient(v) {
+  vertical = v;
+  $("browse").classList.toggle("h", !v);
+  $("o-v").setAttribute("aria-pressed", v); $("o-h").setAttribute("aria-pressed", !v);
+  $("turn").classList.toggle("flip", !v);   // 直排：‹ 下一頁 在左；橫排：‹ 上一頁 在左
+  $("next").textContent = v ? "‹ 下一頁" : "下一頁 ›";
+  $("prev").textContent = v ? "上一頁 ›" : "‹ 上一頁";
+  render(true); if (lastSearch) showSearch(false); else updateQ();
+}
 function render(animate = true) {
-  const text = Array.from(pageAt(current));
-  const pageEl = $("page");
-  const [hs, hn] = highlight || [-1, 0];
-  pageEl.innerHTML = text.map((c, i) => {
-    const cls = (i >= hs && i < hs + hn ? "m " : "") + (INDEX.get(c) <= PUNCT.length ? "p" : "");
-    return cls ? `<i class="${cls.trim()}">${esc(c)}</i>` : `<i>${esc(c)}</i>`;
-  }).join("");
-  pageEl.className = "page " + (vertical ? "v" : "h");
+  paintPaper($("page"), Array.from(pageAt(current)), highlight, current);
   drawWhere(current);
   const p = splitAddr(current);
   $("hex").value = hexStr(p.hex);
@@ -553,11 +725,7 @@ function render(animate = true) {
   $("prev").disabled = current === 0n;
   $("next").disabled = current >= M - 1n;
   $("hint").textContent = vertical ? "直排，由右而左讀。一頁四百字，正好一張稿紙。" : "橫排，由左而右讀。一頁四百字，正好一張稿紙。";
-  if (animate) {
-    const v = $("veil");
-    v.classList.remove("go", "h"); void v.offsetWidth;
-    v.classList.add("go"); if (!vertical) v.classList.add("h");
-  }
+  if (animate) veil("veil");
 }
 function goTo(a, hl = null, animate = true) {
   current = a; highlight = hl; $("browse-err").textContent = ""; $("note").textContent = "";
@@ -602,7 +770,15 @@ const linkMsg = (s) => `已複製連結（${fmt(s.length)} 個字元。每一頁
 $("random").onclick = () => goTo(randomBelow(M));
 $("prev").onclick = () => { if (current > 0n) goTo(current - 1n); };
 $("next").onclick = () => { if (current < M - 1n) goTo(current + 1n); };
-$("orient").onclick = () => { vertical = !vertical; $("orient").textContent = vertical ? "改為橫排" : "改為直排"; render(); };
+$("o-v").onclick = () => vertical || setOrient(true);
+$("o-h").onclick = () => vertical && setOrient(false);
+document.addEventListener("keydown", (e) => {
+  if ($("browse").hidden || e.metaKey || e.ctrlKey || e.altKey || e.target.closest("input, textarea, select")) return;
+  const fwd = vertical ? "ArrowLeft" : "ArrowRight", back = vertical ? "ArrowRight" : "ArrowLeft";
+  if (e.key === fwd && current < M - 1n) { e.preventDefault(); goTo(current + 1n); }
+  else if (e.key === back && current > 0n) { e.preventDefault(); goTo(current - 1n); }
+  else if (e.key === "r" || e.key === "R") { e.preventDefault(); goTo(randomBelow(M)); }
+});
 $("share").onclick = () => { const s = linkFor(current, highlight); copyText(s, linkMsg(s)); };
 $("copy").onclick = () => { const s = fullAddr(current); copyText(s, `已複製完整位址（${fmt(s.length)} 個字元）`); };
 $("go").onclick = () => {
@@ -627,32 +803,45 @@ function badHTML(bad) {
   return bad.length ? `字集裡沒有：${bad.slice(0, 30).map((c) => `<span>${esc(c)}</span>`).join("")}${bad.length > 30 ? "……" : ""}` : "";
 }
 const qText = () => normalize($("q").value);
+const liveMode = () => radio("pos") === "start" && radio("fill") === "blank";
+let lastSearch = null;
 function updateQ() {
   const t = Array.from(qText()), bad = unsupported(t.join(""));
   $("q-count").textContent = `${fmt(t.length)} ／ ${fmt(L)} 字`;
   $("q-bad").innerHTML = badHTML(bad);
   $("strip").hidden = !bad.length;
+  $("find").hidden = liveMode();
+  $("search-err").textContent = t.length > L ? `超過 ${fmt(L)} 字了，一頁放不下。` : "";
+  const ok = t.length > 0 && t.length <= L && !bad.length;
+  if (ok && liveMode()) { lastSearch = buildPage(t, "start", "blank"); showSearch(false); return; }
+  lastSearch = null; $("result").hidden = true;
+  paintPaper($("q-page"), t.slice(0, L), t.length ? [0, Math.min(t.length, L)] : null, null);
 }
-$("q").addEventListener("input", updateQ);
-$("strip").onclick = () => { $("q").value = Array.from(qText()).map((c) => (INDEX.has(c) ? c : "　")).join(""); updateQ(); };
-let lastSearch = null;
+function showSearch(animate) {
+  const { a, hl } = lastSearch;
+  paintPaper($("q-page"), Array.from(pageAt(a)), hl, a);
+  $("r-loc").innerHTML = locHTML(a);
+  $("r-note").textContent = liveMode()
+    ? "這是唯一一頁「只有這段文字、其餘全是空白」的書頁。不管誰、在什麼時候寫下同樣的字，都會來到這裡。"
+    : "周圍的字是隨機的，所以每找一次都會落在不同的一頁。這段文字在館裡出現的次數，多到寫不出來。";
+  $("result").hidden = false; $("r-msg").textContent = "";
+  if (animate) veil("q-veil");
+}
 function doSearch() {
   const err = $("search-err"); err.textContent = "";
   const t = Array.from(qText());
   if (!t.length) return void (err.textContent = "請先輸入文字。");
   if (t.length > L) return void (err.textContent = `超過 ${fmt(L)} 字了（目前 ${fmt(t.length)} 字），一頁放不下。`);
   if (unsupported(t.join("")).length) return void (err.textContent = "有些字不在字集裡，請刪掉，或按「把不支援的字換成空白」。");
-  const pos = radio("pos"), fill = radio("fill");
-  lastSearch = buildPage(t, pos, fill);
-  $("r-loc").innerHTML = locHTML(lastSearch.a);
-  $("r-note").textContent = fill === "random" || pos === "random"
-    ? "周圍的字是隨機的，所以每找一次都會落在不同的一頁。這段文字在館裡出現的次數，多到寫不出來。"
-    : "這是唯一一頁「只有這段文字、其餘全是空白」的書頁。不管誰、在什麼時候來找，都是這一頁。";
-  $("result").hidden = false; $("r-msg").textContent = "";
+  lastSearch = buildPage(t, radio("pos"), radio("fill"));
+  showSearch(true);
 }
+$("q").addEventListener("input", updateQ);
+document.querySelectorAll("input[name=pos], input[name=fill]").forEach((r) => r.addEventListener("change", updateQ));
+$("strip").onclick = () => { $("q").value = Array.from(qText()).map((c) => (INDEX.has(c) ? c : "　")).join(""); updateQ(); };
 $("find").onclick = doSearch;
 $("r-again").onclick = () => {
-  if (radio("pos") === "start" && radio("fill") === "blank") document.querySelector("input[name=fill][value=random]").checked = true;
+  if (liveMode()) { document.querySelector("input[name=fill][value=random]").checked = true; updateQ(); }
   doSearch();
 };
 $("r-open").onclick = () => openAt(lastSearch.a, lastSearch.hl);
@@ -665,6 +854,7 @@ function openAt(a, hl) {        // 先讓翻閱頁可見，才能量位置、捲
 }
 
 // ---- 你的一生 ----
+let lifeHit = null;
 const STORE = "babel-life-v4", OLD_STORES = ["babel-life-v3", "babel-life-v2", "babel-life-v1"];
 function loadLedger() {
   try {
@@ -710,11 +900,19 @@ function updateLife() {
   $("l-name-f").hidden = !said;
   $("l-text-lbl").textContent = said ? "那句話" : "那件事";
   $("l-text").placeholder = said ? "我會回來的。" : "我在雨裡等一班遲到的公車，然後遇見了你";
-  const { body, line } = composeLife();
+  const { iso, body, line } = composeLife();
   const bad = unsupported(line);
-  $("l-preview").textContent = body ? `館中的寫法：${line}` : "";
   $("l-bad").innerHTML = badHTML(bad);
   $("l-strip").hidden = !bad.length;
+  if (lifeHit && lifeHit.entry.line === line) return;
+  lifeHit = null;                    // 還沒找：目錄卡只是草稿
+  $("c-date").textContent = zhDate(iso);
+  $("c-tense").textContent = TENSE[tenseOf(iso)];
+  $("c-line").textContent = body ? line : "（寫下一句話，它會出現在這張卡上。）";
+  $("c-line").classList.toggle("ph", !body);
+  $("c-call").innerHTML = `<div>索書號 <span>尚未查找</span></div><div>按「在館中尋找」，館員會替它蓋章。</div>`;
+  $("c-stamp").classList.remove("on");
+  $("l-result").hidden = true;
 }
 ["l-date", "l-name", "l-text"].forEach((id) => $(id).addEventListener("input", updateLife));
 document.querySelectorAll("input[name=kind]").forEach((r) => r.addEventListener("change", updateLife));
@@ -727,12 +925,12 @@ const VERDICT = {
   today: (loc) => `就是今天。這一頁在你開口之前就在這裡了：${loc}。`,
   future: (loc) => `這件事還沒有發生。寫著它的那一頁，已經在這裡了：${loc}。同一座館裡，也收著它沒有發生的版本。`,
 };
-let lifeHit = null;
 function showLife(entry, hit, fresh) {
   const p = splitAddr(hit.a), tense = tenseOf(entry.iso);
   $("c-date").textContent = zhDate(entry.iso);
   $("c-tense").textContent = TENSE[tense];
-  $("c-line").textContent = entry.line;
+  $("c-line").textContent = entry.line; $("c-line").classList.remove("ph");
+  const st = $("c-stamp"); st.classList.remove("on"); void st.offsetWidth; st.classList.add("on");
   $("c-call").innerHTML = `<div>索書號 <span>${esc(shortHex(p.hex, 64))} ・ ${p.wall}-${p.shelf}-${p.vol} ・ p.${p.page}</span></div><div>位於第 ${hit.hl[0] + 1} 字起，共 ${hit.hl[1]} 字</div>`;
   const loc = `第${zhNum(p.wall)}面牆、第${zhNum(p.shelf)}層架、第 ${p.vol} 冊、第 ${p.page} 頁`;
   $("l-verdict").textContent = VERDICT[tense](loc);
@@ -818,7 +1016,6 @@ const TABS = ["browse", "search", "life", "about"];
 function show(tab) {
   for (const id of TABS) $(id).hidden = id !== tab;
   document.querySelectorAll(".mast nav a").forEach((a) => (a.dataset.tab === tab ? a.setAttribute("aria-current", "page") : a.removeAttribute("aria-current")));
-  document.querySelector(".thesis").hidden = tab !== "browse";
   syncURL();
 }
 function route() {
@@ -844,6 +1041,8 @@ window.addEventListener("hashchange", route);
 $("l-date").value = todayISO();
 updateQ(); updateLife(); drawLedger();
 if (!route()) goTo(randomBelow(M), null, false);
+(document.fonts ? Promise.race([document.fonts.ready, new Promise((r) => setTimeout(r, 1200))]) : Promise.resolve())
+  .then(() => requestAnimationFrame(() => requestAnimationFrame(() => document.body.classList.remove("boot"))));
 </script>
 </body>
 </html>
