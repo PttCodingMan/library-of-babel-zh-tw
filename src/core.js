@@ -40,14 +40,17 @@ function bigToDigits(x, base, n, out = new Array(n), off = 0) {
   return out;
 }
 function bitLength(x) { return x === 0n ? 0 : x.toString(2).length; }
-function parseBase36(s) {
+// 室號用 64 進位，數字依序是 0–9、A–Z、a–z、-、_（都是網址裡不必跳脫的字元；分大小寫）
+const ROOM_DIGITS = "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz-_";
+const ROOM_VAL = new Map(Array.from(ROOM_DIGITS, (c, i) => [c, i]));
+function parseRoom(s) {
   const d = [];
   for (let i = s.length - 1; i >= 0; i--) {
-    const v = parseInt(s[i], 36);
-    if (Number.isNaN(v)) throw new Error("室號只能有 0–9 與 a–z");
+    const v = ROOM_VAL.get(s[i]);
+    if (v === undefined) throw new Error("室號只能有 0–9、A–Z、a–z、- 與 _（大小寫不同）");
     d.push(v);
   }
-  return digitsToBig(d, 36n);
+  return d.length ? digitsToBig(d, 64n) : 0n;
 }
 
 // ---- 圖書館的大小 ----
@@ -123,8 +126,13 @@ function contentToAddr(c) { return permuteBelow(c, M, false); }
 function addrToContent(a) { return permuteBelow(a, M, true); }
 
 // 室號固定位數：補零到最大室號的長度
-const HEX_DIGITS = (MAX_HEX - 1n).toString(36).length;
-function hexStr(h) { return h.toString(36).padStart(HEX_DIGITS, "0"); }
+const HEX_DIGITS = Math.ceil(bitLength(MAX_HEX - 1n) / 6);
+function hexStr(h) {
+  const d = bigToDigits(h, 64n, HEX_DIGITS);
+  let s = "";
+  for (let i = HEX_DIGITS - 1; i >= 0; i--) s += ROOM_DIGITS[d[i]];
+  return s;
+}
 
 // ---- 頁面 <-> 位址 ----
 function pageAt(a) {
@@ -179,5 +187,5 @@ function unsupported(text) {
 
 if (typeof module !== "undefined") module.exports = {
   ALPHABET, N, L, GRID, M, K, MAX_HEX, PER_HEX, pageAt, addrOfText, splitAddr, joinAddr,
-  contentToAddr, addrToContent, permuteBelow, HEX_DIGITS, hexStr, parseBase36, randomBelow, normalize, unsupported, digitsToBig, bigToDigits,
+  contentToAddr, addrToContent, permuteBelow, HEX_DIGITS, hexStr, parseRoom, randomBelow, normalize, unsupported, digitsToBig, bigToDigits,
 };

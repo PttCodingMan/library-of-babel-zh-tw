@@ -306,7 +306,7 @@ section.tab { padding-top: 8px; }
           <summary>前往一個位址</summary>
           <div class="goto-body">
             <div class="field">
-              <label for="hex">室號（36 進位；也可以貼上「室號:牆:架:冊:頁」）</label>
+              <label for="hex">室號（64 進位，大小寫不同；也可以貼上「室號:牆:架:冊:頁」）</label>
               <textarea id="hex" class="mono" rows="4" spellcheck="false" autocomplete="off"></textarea>
             </div>
             <div class="grid4">
@@ -438,7 +438,7 @@ section.tab { padding-top: 8px; }
       <p>置亂是對整座館一次做完的：只寫了一句話的頁面、全空白的頁面、寫滿四百字的頁面，一起被打散到所有房間裡。所以從位址看不出那一頁寫了多少字，隔壁那一頁跟它也毫無關係。</p>
       <h2>網址就是位置</h2>
       <p>位址拆成：室號 × 262,400 ＋（牆、架、冊、頁），網址列寫的就是這個位置，複製下來就能分享。網址裡沒有那一頁的文字，只有座標；打開的人得在自己的瀏覽器裡把那一頁算出來。</p>
-      <p>室號一律寫成 <span id="a-hd"></span> 碼（不足的在前面補零），所以每個網址都一樣長，不管那一頁寫的是一句話還是整整四百字。室號會這麼長，是因為館裡的頁數就是這麼多：要在這麼多頁裡指出其中一頁，需要的資訊量跟寫滿一頁一樣多。這也是這座圖書館最殘酷的地方：找到一頁和寫出一頁，其實是同一件事。</p>
+      <p>室號用 64 進位（0–9、A–Z、a–z、-、_，大小寫不同），一律寫成 <span id="a-hd"></span> 碼（不足的在前面補零），所以每個網址都一樣長，不管那一頁寫的是一句話還是整整四百字。室號會這麼長，是因為館裡的頁數就是這麼多：要在這麼多頁裡指出其中一頁，需要的資訊量跟寫滿一頁一樣多。這也是這座圖書館最殘酷的地方：找到一頁和寫出一頁，其實是同一件事。</p>
       <h2>關於「你的一生」</h2>
       <p>那裡說的每一句都是真的。你輸入的句子，確實早就有一頁收著它，而且不管誰在什麼時候查，都會得到同一個位址。寫著明天的那一頁也確實存在；只是它的隔壁，同樣存在著明天的每一種其他寫法。圖書館收藏一切，所以它從不替你挑選哪一個才是真的。</p>
       <p class="fine">字集順序：全形空白，接著「<span id="a-plist"></span>」，接著依 Big5 編碼順序排列的漢字（一、乙、丁、七……）。</p>
@@ -495,14 +495,17 @@ function bigToDigits(x, base, n, out = new Array(n), off = 0) {
   return out;
 }
 function bitLength(x) { return x === 0n ? 0 : x.toString(2).length; }
-function parseBase36(s) {
+// 室號用 64 進位，數字依序是 0–9、A–Z、a–z、-、_（都是網址裡不必跳脫的字元；分大小寫）
+const ROOM_DIGITS = "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz-_";
+const ROOM_VAL = new Map(Array.from(ROOM_DIGITS, (c, i) => [c, i]));
+function parseRoom(s) {
   const d = [];
   for (let i = s.length - 1; i >= 0; i--) {
-    const v = parseInt(s[i], 36);
-    if (Number.isNaN(v)) throw new Error("室號只能有 0–9 與 a–z");
+    const v = ROOM_VAL.get(s[i]);
+    if (v === undefined) throw new Error("室號只能有 0–9、A–Z、a–z、- 與 _（大小寫不同）");
     d.push(v);
   }
-  return digitsToBig(d, 36n);
+  return d.length ? digitsToBig(d, 64n) : 0n;
 }
 
 // ---- 圖書館的大小 ----
@@ -578,8 +581,13 @@ function contentToAddr(c) { return permuteBelow(c, M, false); }
 function addrToContent(a) { return permuteBelow(a, M, true); }
 
 // 室號固定位數：補零到最大室號的長度
-const HEX_DIGITS = (MAX_HEX - 1n).toString(36).length;
-function hexStr(h) { return h.toString(36).padStart(HEX_DIGITS, "0"); }
+const HEX_DIGITS = Math.ceil(bitLength(MAX_HEX - 1n) / 6);
+function hexStr(h) {
+  const d = bigToDigits(h, 64n, HEX_DIGITS);
+  let s = "";
+  for (let i = HEX_DIGITS - 1; i >= 0; i--) s += ROOM_DIGITS[d[i]];
+  return s;
+}
 
 // ---- 頁面 <-> 位址 ----
 function pageAt(a) {
@@ -634,7 +642,7 @@ function unsupported(text) {
 
 if (typeof module !== "undefined") module.exports = {
   ALPHABET, N, L, GRID, M, K, MAX_HEX, PER_HEX, pageAt, addrOfText, splitAddr, joinAddr,
-  contentToAddr, addrToContent, permuteBelow, HEX_DIGITS, hexStr, parseBase36, randomBelow, normalize, unsupported, digitsToBig, bigToDigits,
+  contentToAddr, addrToContent, permuteBelow, HEX_DIGITS, hexStr, parseRoom, randomBelow, normalize, unsupported, digitsToBig, bigToDigits,
 };
 
 
@@ -748,16 +756,16 @@ function goTo(a, hl = null, animate = true) {
   syncURL();
 }
 
-// ---- 可分享的連結：網址就是位置 #c/<室號>/<牆>/<架>/<冊>/<頁>[~起,長]，室號固定位數，所以每個網址都一樣長 ----
+// ---- 可分享的連結：網址就是位置 #d/<室號>/<牆>/<架>/<冊>/<頁>[~起,長]，室號固定位數，所以每個網址都一樣長 ----
 function parseFull(raw) {
-  raw = raw.trim().toLowerCase().replace(/\s+/g, "");
+  raw = raw.trim().replace(/\s+/g, "");
   const seg = raw.split(/[:/]/);
   if (seg.length !== 5) throw new Error("完整位址的格式是「室號:牆:架:冊:頁」。");
   return checkAddr(seg[0], { wall: +seg[1], shelf: +seg[2], vol: +seg[3], page: +seg[4] });
 }
 function checkAddr(raw, parts) {
   if (!raw) throw new Error("請輸入室號。");
-  const hex = parseBase36(raw);
+  const hex = parseRoom(raw);
   const lim = { wall: 4, shelf: 5, vol: 32, page: 410 }, name = { wall: "牆", shelf: "架", vol: "冊", page: "頁" };
   for (const k in lim) if (!Number.isInteger(parts[k]) || parts[k] < 1 || parts[k] > lim[k]) throw new Error(`「${name[k]}」要介於 1 到 ${lim[k]} 之間。`);
   if (hex >= MAX_HEX) throw new Error("這個室號超出了圖書館的範圍：再往外已經沒有房間了。");
@@ -769,7 +777,7 @@ function hashFor(a, hl) {
   // 頁面若只有標記的那段文字、其後全是空白，標記就是多餘的：位置本身已經說明一切
   if (hl && hl[0] === 0 && /^　*$/.test(Array.from(pageAt(a)).slice(hl[1]).join(""))) hl = null;
   const p = splitAddr(a);
-  return `#c/${hexStr(p.hex)}/${p.wall}/${p.shelf}/${pad2(p.vol)}/${pad3(p.page)}${hl ? `~${hl[0]},${hl[1]}` : ""}`;
+  return `#d/${hexStr(p.hex)}/${p.wall}/${p.shelf}/${pad2(p.vol)}/${pad3(p.page)}${hl ? `~${hl[0]},${hl[1]}` : ""}`;
 }
 const linkFor = (a, hl) => location.origin + location.pathname + hashFor(a, hl);
 function syncURL() {            // 網址列永遠就是目前的位置
@@ -792,7 +800,7 @@ $("go").onclick = () => {
   try {
     const raw = $("hex").value;
     const a = raw.includes(":") ? parseFull(raw)
-      : checkAddr(raw.trim().toLowerCase().replace(/\s+/g, ""), { wall: +$("wall").value, shelf: +$("shelf").value, vol: +$("vol").value, page: +$("pg").value });
+      : checkAddr(raw.trim().replace(/\s+/g, ""), { wall: +$("wall").value, shelf: +$("shelf").value, vol: +$("vol").value, page: +$("pg").value });
     goTo(a);
   } catch (e) { $("browse-err").textContent = e.message; }
 };
@@ -848,7 +856,7 @@ function openAt(a, hl) {        // 先讓翻閱頁可見，才能量位置、捲
 }
 
 // ---- 你的一生 ----
-const STORE = "babel-life-v3", OLD_STORES = ["babel-life-v2", "babel-life-v1"];
+const STORE = "babel-life-v4", OLD_STORES = ["babel-life-v3", "babel-life-v2", "babel-life-v1"];
 function loadLedger() {
   try {
     const cur = localStorage.getItem(STORE);
@@ -1006,12 +1014,12 @@ function show(tab) {
 }
 function route() {
   const h = decodeURIComponent(location.hash.slice(1));
-  if (/^[pab]\//.test(h)) {     // 舊版的連結（#p/ 帶文字、#a/ 分層置亂、#b/ 每頁 3,200 字）：館已重新編排，位址不再相同
+  if (/^[pabc]\//.test(h)) {     // 舊版的連結（#p/ 帶文字、#a/ 分層置亂、#b/ 每頁 3,200 字、#c/ 36 進位室號）：館已重新編排，位址不再相同
     show("browse"); goTo(randomBelow(M));
     $("note").textContent = "這是舊版的連結。館藏重新編排過，舊位址已經對不到原本那一頁了，先帶你到隨機的一頁。";
     return true;
   }
-  if (h.startsWith("c/")) {
+  if (h.startsWith("d/")) {
     show("browse");
     try {
       const [addr, hlRaw] = h.slice(2).split("~");

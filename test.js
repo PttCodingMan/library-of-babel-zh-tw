@@ -27,7 +27,9 @@ console.log('小範圍窮舉雙射 OK');
 // 2. 室號位數固定
 console.log('室號固定', C.HEX_DIGITS, '碼');
 assert(C.hexStr(0n).length === C.HEX_DIGITS && C.hexStr(C.MAX_HEX - 1n).length === C.HEX_DIGITS, '室號位數不固定');
-assert(C.parseBase36(C.hexStr(5n)) === 5n, '補零的室號解析失敗');
+assert(C.parseRoom(C.hexStr(5n)) === 5n && C.hexStr(5n).endsWith('05'), '補零的室號解析失敗');
+assert(C.hexStr(63n).endsWith('_') && C.hexStr(64n).endsWith('10') && C.parseRoom('Az') !== C.parseRoom('aZ'), '64 進位位數錯誤');
+for (let i = 0; i < 20; i++) { const h = C.randomBelow(C.MAX_HEX); assert(C.parseRoom(C.hexStr(h)) === h && /^[0-9A-Za-z_-]+$/.test(C.hexStr(h)), '64 進位來回失敗'); }
 
 // 3. 各種長度的文字（含全空白）：搜尋 -> 翻開 -> 一致，室號都一樣長
 let t = Date.now();
@@ -40,7 +42,7 @@ for (const n of [0, 1, 2, 3, 5, 18, 40, 100, 255, 399, 400]) {
   assert(C.joinAddr(sp) === a, 'split/join 失敗');
   const hs = C.hexStr(sp.hex);
   assert(hs.length === C.HEX_DIGITS, `長度 ${n} 的室號是 ${hs.length} 碼`);
-  assert(C.parseBase36(hs) === sp.hex, '36 進位失敗');
+  assert(C.parseRoom(hs) === sp.hex, '64 進位失敗');
   console.log(`  長度 ${String(n).padStart(4)} 字 -> 室號 ${hs.length} 碼，開頭 ${hs.slice(0, 12)}…`);
 }
 console.log('各長度來回 OK', Date.now() - t, 'ms');
