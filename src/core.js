@@ -3,7 +3,8 @@
 const PUNCT = "，。、；：？！「」『』（）《》〈〉—…·";
 const ALPHABET = Array.from("　" + PUNCT + HANZI);
 const N = BigInt(ALPHABET.length);
-const L = 3200;                       // 每頁字數
+const L = 400;                        // 每頁字數：一張 20 × 20 的四百字稿紙
+const GRID = 20;                      // 稿紙每行字數與行數
 const WALLS = 4, SHELVES = 5, VOLUMES = 32, PAGES = 410;
 const PER_HEX = BigInt(WALLS * SHELVES * VOLUMES * PAGES); // 262,400 頁／室
 const INDEX = new Map(ALPHABET.map((c, i) => [c, i]));
@@ -177,6 +178,6 @@ function unsupported(text) {
 }
 
 if (typeof module !== "undefined") module.exports = {
-  ALPHABET, N, L, M, K, MAX_HEX, PER_HEX, pageAt, addrOfText, splitAddr, joinAddr,
+  ALPHABET, N, L, GRID, M, K, MAX_HEX, PER_HEX, pageAt, addrOfText, splitAddr, joinAddr,
   contentToAddr, addrToContent, permuteBelow, HEX_DIGITS, hexStr, parseBase36, randomBelow, normalize, unsupported, digitsToBig, bigToDigits,
 };

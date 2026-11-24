@@ -31,7 +31,7 @@ assert(C.parseBase36(C.hexStr(5n)) === 5n, '補零的室號解析失敗');
 
 // 3. 各種長度的文字（含全空白）：搜尋 -> 翻開 -> 一致，室號都一樣長
 let t = Date.now();
-for (const n of [0, 1, 2, 3, 5, 18, 40, 100, 777, 3199, 3200]) {
+for (const n of [0, 1, 2, 3, 5, 18, 40, 100, 255, 399, 400]) {
   const text = pad(randText(n));
   const a = C.addrOfText(text);
   assert(a >= 0n && a < C.M, `長度 ${n} 越界`);
