@@ -11,36 +11,49 @@ const randText = (n) => { let s = ''; for (let i = 0; i < n; i++) s += C.ALPHABE
 
 console.log('字集', C.N, '總頁數約 10^' + (C.M.toString().length - 1));
 
-// 1. 全空白的那一頁在位址 0
-assert(C.addrOfText(pad('')) === 0n, '空白頁不在 0');
-assert(C.pageAt(0n) === pad(''), '位址 0 不是空白頁');
-
-// 2. 第一層（只有第 1 個字有內容）窮舉：必須是 [1, N) 上的雙射
-{
+// 1. 置換機制：在小範圍窮舉，必須是雙射（cycle walking 正確）
+for (const size of [2n, 3n, 1000n, C.N, 70000n]) {
   const seen = new Set();
-  for (let c = 1n; c < C.N; c++) {
-    const a = C.contentToAddr(c);
-    assert(a >= 1n && a < C.N, `第一層越界 ${c} -> ${a}`);
-    assert(!seen.has(a), `第一層撞號 ${a}`);
+  for (let c = 0n; c < size; c++) {
+    const a = C.permuteBelow(c, size, false);
+    assert(a >= 0n && a < size, `越界 ${c} -> ${a}（範圍 ${size}）`);
+    assert(!seen.has(a), `撞號 ${a}（範圍 ${size}）`);
     seen.add(a);
-    assert(C.addrToContent(a) === c, `第一層還原失敗 ${c}`);
+    assert(C.permuteBelow(a, size, true) === c, `還原失敗 ${c}（範圍 ${size}）`);
   }
-  console.log('第一層雙射 OK（' + seen.size + ' 頁）');
 }
+console.log('小範圍窮舉雙射 OK');
 
-// 3. 各種長度的文字：搜尋 -> 翻開 -> 一致，且位址落在同一層
+// 2. 室號位數固定
+console.log('室號固定', C.HEX_DIGITS, '碼');
+assert(C.hexStr(0n).length === C.HEX_DIGITS && C.hexStr(C.MAX_HEX - 1n).length === C.HEX_DIGITS, '室號位數不固定');
+assert(C.parseRoom(C.hexStr(5n)) === 5n && C.hexStr(5n).endsWith('05'), '補零的室號解析失敗');
+assert(C.hexStr(63n).endsWith('_') && C.hexStr(64n).endsWith('10') && C.parseRoom('Az') !== C.parseRoom('aZ'), '64 進位位數錯誤');
+for (let i = 0; i < 20; i++) { const h = C.randomBelow(C.MAX_HEX); assert(C.parseRoom(C.hexStr(h)) === h && /^[0-9A-Za-z_-]+$/.test(C.hexStr(h)), '64 進位來回失敗'); }
+
+// 3. 各種長度的文字（含全空白）：搜尋 -> 翻開 -> 一致，室號都一樣長
 let t = Date.now();
-for (const n of [1, 2, 3, 5, 18, 40, 100, 777, 3199, 3200]) {
+for (const n of [0, 1, 2, 3, 5, 18, 40, 100, 255, 399, 400]) {
   const text = pad(randText(n));
   const a = C.addrOfText(text);
-  assert(C.layerOfAddr(a) === n, `長度 ${n} 落在第 ${C.layerOfAddr(a)} 層`);
+  assert(a >= 0n && a < C.M, `長度 ${n} 越界`);
   assert(C.pageAt(a) === text, `長度 ${n} 來回失敗`);
   const sp = C.splitAddr(a);
   assert(C.joinAddr(sp) === a, 'split/join 失敗');
-  assert(C.parseBase36(sp.hex.toString(36)) === sp.hex, '36 進位失敗');
-  console.log(`  長度 ${String(n).padStart(4)} 字 -> 室號 ${sp.hex.toString(36).length} 碼`);
+  const hs = C.hexStr(sp.hex);
+  assert(hs.length === C.HEX_DIGITS, `長度 ${n} 的室號是 ${hs.length} 碼`);
+  assert(C.parseRoom(hs) === sp.hex, '64 進位失敗');
+  console.log(`  長度 ${String(n).padStart(4)} 字 -> 室號 ${hs.length} 碼，開頭 ${hs.slice(0, 12)}…`);
 }
 console.log('各長度來回 OK', Date.now() - t, 'ms');
+
+// 3b. 短文字的位址不會擠在一起：位址的最高位應該像隨機數
+{
+  let hi = 0;
+  for (let i = 0; i < 200; i++) if (C.addrOfText(pad(randText(10))) >= C.M / 2n) hi++;
+  assert(hi > 60 && hi < 140, `短文字位址分布偏斜（${hi}/200 在上半段）`);
+  console.log('短文字位址分布 OK（' + hi + '/200 落在上半段）');
+}
 
 // 4. 隨機位址（幾乎都是寫滿的頁）來回
 t = Date.now();

@@ -25,9 +25,6 @@
   --seal-soft: rgba(181, 64, 44, .2);
   --serif: "Noto Serif TC", "Noto Serif CJK TC", "Source Han Serif TC", "Songti TC", "PMingLiU", "MingLiU", serif;
   --mono: "JetBrains Mono", ui-monospace, "SF Mono", Menlo, Consolas, monospace;
-  --page-fs: 20px;
-  --page-lh: 1.8;
-  --col-chars: 32;
   --rail: 300px;
   --max: 1120px;
   color-scheme: dark;
@@ -153,18 +150,20 @@ input[type=date] { font-family: var(--mono); font-size: 14px; }
   content: ""; position: absolute; inset: 12px; border: 1px solid var(--rule);
   box-shadow: inset 0 0 0 3px var(--paper), inset 0 0 0 4px var(--rule); pointer-events: none; z-index: 1;
 }
-.leaf-scroll { overflow-x: auto; overflow-y: hidden; scrollbar-width: thin; scrollbar-color: rgba(0,0,0,.25) transparent; }
-.page { margin: 0; font-family: var(--serif); font-size: var(--page-fs); line-height: var(--page-lh); white-space: pre-wrap; word-break: break-all; line-break: anywhere; }
-.page.v {
-  writing-mode: vertical-rl; height: calc(var(--page-fs) * var(--col-chars) + 72px); padding: 36px 40px;
-  background-image: repeating-linear-gradient(to left, transparent 0 calc(var(--page-fs) * var(--page-lh) - 1px), var(--rule) calc(var(--page-fs) * var(--page-lh) - 1px) calc(var(--page-fs) * var(--page-lh)));
-  background-origin: content-box; background-clip: content-box;
+.leaf-scroll { padding: clamp(26px, 5cqi, 40px); container-type: inline-size; }
+/* 一頁就是一張四百字稿紙：20 × 20 的方格，一格一字 */
+.page {
+  margin: 0; font-family: var(--serif); font-size: calc(100cqi / 20 * .62); line-height: 1;
+  display: grid; grid-template-columns: repeat(20, 1fr); grid-template-rows: repeat(20, auto);
+  border-top: 1px solid var(--rule); border-left: 1px solid var(--rule);
 }
-.page.h { padding: 40px clamp(22px, 4vw, 52px); }
-/* 每個字一格 1em 見方：Web 字型缺字時改用系統字，有些系統字在直排沒有字寬，會疊在一起；固定格子可避免 */
-.page i { display: inline-block; width: 1em; height: 1em; line-height: 1em; font-style: normal; text-align: center; vertical-align: middle; }
-.page.v i { writing-mode: horizontal-tb; }   /* 漢字在格內橫排：所有字型都有橫排字寬，直排字寬不一定有 */
-.page.v i.p { writing-mode: vertical-rl; }   /* 標點維持直排，才會轉向、置中 */
+.page.v { grid-auto-flow: column; direction: rtl; }   /* 直排：由上而下、由右而左 */
+.page.h { grid-auto-flow: row; }
+.page i {
+  display: flex; align-items: center; justify-content: center; aspect-ratio: 1; min-width: 0;
+  border-right: 1px solid var(--rule); border-bottom: 1px solid var(--rule); font-style: normal; direction: ltr;
+}
+.page.v i.p { writing-mode: vertical-rl; }   /* 直排時標點轉向、置中 */
 .page i.m { background: var(--seal-soft); color: var(--ink); }
 .veil { position: absolute; inset: 0; pointer-events: none; z-index: 2; overflow: hidden; border-radius: 2px; display: none; }
 .veil::before { content: ""; position: absolute; top: 0; bottom: 0; left: 0; width: 150%; background: linear-gradient(to right, var(--paper) 66%, transparent); transform: translateX(-100%); }
@@ -250,7 +249,6 @@ section.tab { padding-top: 8px; }
   .thesis { margin: 32px 0 28px; }
 }
 @media (max-width: 560px) {
-  :root { --page-fs: 18px; --col-chars: 26; }
   .mast { gap: 14px; padding-top: 20px; }
   .mast nav { margin-left: 0; width: 100%; justify-content: space-between; }
   .mast nav a { padding: 6px 4px; font-size: 14px; }
@@ -275,7 +273,7 @@ section.tab { padding-top: 8px; }
     </nav>
   </header>
 
-  <p class="thesis">用這些字寫成、長度在三千二百字以內的每一段文字，都已經擺在館中的某一頁。<em>包括你寫過的、還沒寫的，和永遠不會有人寫的。</em></p>
+  <p class="thesis">用這些字寫成、長度在四百字以內的每一段文字，都已經擺在館中的某一頁。<em>包括你寫過的、還沒寫的，和永遠不會有人寫的。</em></p>
 
   <!-- ===== 翻閱 ===== -->
   <section class="tab" id="browse">
@@ -308,7 +306,7 @@ section.tab { padding-top: 8px; }
           <summary>前往一個位址</summary>
           <div class="goto-body">
             <div class="field">
-              <label for="hex">室號（36 進位；也可以貼上「室號:牆:架:冊:頁」）</label>
+              <label for="hex">室號（64 進位，大小寫不同；也可以貼上「室號:牆:架:冊:頁」）</label>
               <textarea id="hex" class="mono" rows="4" spellcheck="false" autocomplete="off"></textarea>
             </div>
             <div class="grid4">
@@ -329,12 +327,12 @@ section.tab { padding-top: 8px; }
       <div class="leafbox">
         <div class="folio"><span id="folio-l"></span><span id="folio-r" class="num"></span></div>
         <div class="leaf">
-          <div class="leaf-scroll" id="leaf-scroll" tabindex="0" aria-label="書頁，可左右捲動">
-            <pre class="page v" id="page"></pre>
+          <div class="leaf-scroll" id="leaf-scroll">
+            <div class="page v" id="page" lang="zh-Hant"></div>
           </div>
           <div class="veil" id="veil"></div>
         </div>
-        <p class="hint" id="hint">直排，由右而左讀。往左捲動可以看完整頁三千二百字。</p>
+        <p class="hint" id="hint">直排，由右而左讀。一頁四百字，正好一張稿紙。</p>
       </div>
     </div>
   </section>
@@ -431,16 +429,16 @@ section.tab { padding-top: 8px; }
     <div class="prose">
       <h2>原典</h2>
       <p>波赫士在 1941 年寫下〈巴別圖書館〉：宇宙是一座由無數六角形閱覽室組成的圖書館。每間閱覽室有六面牆，其中四面是書架，每面五層，每層三十二冊，每冊四百一十頁。書架上的書窮盡了所有字母的所有排列。絕大多數是無意義的亂碼，但其中必然也有每一本真實的書、它的每一種錯誤版本，以及每個人一生的準確記載。</p>
-      <p>2015 年 Jonathan Basile 把它做成網站 libraryofbabel.info，用 29 個字元（英文小寫字母、空白、逗號、句號）組成 3,200 字元的頁面。這裡是同樣構想的繁體中文版。</p>
+      <p>2015 年 Jonathan Basile 把它做成網站 libraryofbabel.info，用 29 個字元（英文小寫字母、空白、逗號、句號）組成 3,200 字元的頁面。這裡是同樣構想的繁體中文版，只是每一頁換成了一張中文稿紙。</p>
       <h2>這座館的規格</h2>
       <p>字集是 Big5（cp950）收錄的全部 <span id="a-han"></span> 個漢字，包含常用字與次常用字，再加上全形空白與 <span id="a-punct"></span> 個全形標點，共 <span id="a-n"></span> 字。簡體字、英文字母與數字不在字集裡；日期請用國字寫（二零二六年）。輸入時，半形標點與空白會自動換成全形。</p>
-      <p>每頁 3,200 字，所以總頁數是 <span id="a-n2"></span> 的 3,200 次方，大約 <span id="a-m"></span> 頁。可觀測宇宙的原子數大約是 10<sup>80</sup>，跟這個數字比起來近乎零。</p>
+      <p>每頁 400 字，就是一張直排二十行、每行二十字的四百字稿紙，所以總頁數是 <span id="a-n2"></span> 的 400 次方，大約 <span id="a-m"></span> 頁。可觀測宇宙的原子數大約是 10<sup>80</sup>，跟這個數字比起來近乎零。</p>
       <h2>它其實沒有存任何東西</h2>
-      <p>每一頁的內容都是當場算出來的。把一頁文字看成一個 <span id="a-n3"></span> 進位、3,200 位數的整數，再經過一個固定的、可逆的置亂函數（大整數乘法與位元混合，加上 cycle walking 把結果限制在範圍內），得到的數字就是它的位址。反過來算，就能從位址還原出那一頁。因為函數是一對一的，每一頁剛好出現一次，不多也不少。</p>
-      <p>置亂是分層做的。一頁的「長度」是它最後一個非空白字的位置；長度相同的頁面占據同一段位址，只在段內打散。所以全空白的那一頁就在入口：第 0 室、第一面牆、第一層架、第 1 冊、第 1 頁。只寫了一句話的頁面，都收在離入口不遠的房間；越往外走，書頁越滿。</p>
+      <p>每一頁的內容都是當場算出來的。把一頁文字看成一個 <span id="a-n3"></span> 進位、400 位數的整數，再經過一個固定的、可逆的置亂函數（大整數乘法與位元混合，加上 cycle walking 把結果限制在範圍內），得到的數字就是它的位址。反過來算，就能從位址還原出那一頁。因為函數是一對一的，每一頁剛好出現一次，不多也不少。</p>
+      <p>置亂是對整座館一次做完的：只寫了一句話的頁面、全空白的頁面、寫滿四百字的頁面，一起被打散到所有房間裡。所以從位址看不出那一頁寫了多少字，隔壁那一頁跟它也毫無關係。</p>
       <h2>網址就是位置</h2>
       <p>位址拆成：室號 × 262,400 ＋（牆、架、冊、頁），網址列寫的就是這個位置，複製下來就能分享。網址裡沒有那一頁的文字，只有座標；打開的人得在自己的瀏覽器裡把那一頁算出來。</p>
-      <p>一句十八個字的話，室號大約四十五碼；寫滿三千二百字的頁面，室號長達八千多碼。這不是因為編碼做得不好，而是寫下「在哪裡」所需的資訊量，本來就跟那一頁的內容一樣多。這也是這座圖書館最殘酷的地方：找到一頁和寫出一頁，其實是同一件事。</p>
+      <p>室號用 64 進位（0–9、A–Z、a–z、-、_，大小寫不同），一律寫成 <span id="a-hd"></span> 碼（不足的在前面補零），所以每個網址都一樣長，不管那一頁寫的是一句話還是整整四百字。室號會這麼長，是因為館裡的頁數就是這麼多：要在這麼多頁裡指出其中一頁，需要的資訊量跟寫滿一頁一樣多。這也是這座圖書館最殘酷的地方：找到一頁和寫出一頁，其實是同一件事。</p>
       <h2>關於「你的一生」</h2>
       <p>那裡說的每一句都是真的。你輸入的句子，確實早就有一頁收著它，而且不管誰在什麼時候查，都會得到同一個位址。寫著明天的那一頁也確實存在；只是它的隔壁，同樣存在著明天的每一種其他寫法。圖書館收藏一切，所以它從不替你挑選哪一個才是真的。</p>
       <p class="fine">字集順序：全形空白，接著「<span id="a-plist"></span>」，接著依 Big5 編碼順序排列的漢字（一、乙、丁、七……）。</p>
@@ -460,7 +458,8 @@ const HANZI = "一乙丁七乃九了二人儿入八几刀刁力匕十卜又三�
 const PUNCT = "，。、；：？！「」『』（）《》〈〉—…·";
 const ALPHABET = Array.from("　" + PUNCT + HANZI);
 const N = BigInt(ALPHABET.length);
-const L = 3200;                       // 每頁字數
+const L = 400;                        // 每頁字數：一張 20 × 20 的四百字稿紙
+const GRID = 20;                      // 稿紙每行字數與行數
 const WALLS = 4, SHELVES = 5, VOLUMES = 32, PAGES = 410;
 const PER_HEX = BigInt(WALLS * SHELVES * VOLUMES * PAGES); // 262,400 頁／室
 const INDEX = new Map(ALPHABET.map((c, i) => [c, i]));
@@ -496,14 +495,17 @@ function bigToDigits(x, base, n, out = new Array(n), off = 0) {
   return out;
 }
 function bitLength(x) { return x === 0n ? 0 : x.toString(2).length; }
-function parseBase36(s) {
+// 室號用 64 進位，數字依序是 0–9、A–Z、a–z、-、_（都是網址裡不必跳脫的字元；分大小寫）
+const ROOM_DIGITS = "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz-_";
+const ROOM_VAL = new Map(Array.from(ROOM_DIGITS, (c, i) => [c, i]));
+function parseRoom(s) {
   const d = [];
   for (let i = s.length - 1; i >= 0; i--) {
-    const v = parseInt(s[i], 36);
-    if (Number.isNaN(v)) throw new Error("室號只能有 0–9 與 a–z");
+    const v = ROOM_VAL.get(s[i]);
+    if (v === undefined) throw new Error("室號只能有 0–9、A–Z、a–z、- 與 _（大小寫不同）");
     d.push(v);
   }
-  return digitsToBig(d, 36n);
+  return d.length ? digitsToBig(d, 64n) : 0n;
 }
 
 // ---- 圖書館的大小 ----
@@ -511,11 +513,10 @@ const M = N ** BigInt(L);            // 總頁數
 const K = bitLength(M);              // 位元寬度
 const MAX_HEX = (M + PER_HEX - 1n) / PER_HEX;
 
-// ---- 分層置亂 ----
-// 一頁的「長度」n = 最後一個非空白字的位置（全空白的那一頁 n = 0）。
-// 頁面內容看成小端序整數 C，長度 n 的頁面恰好是 [N^(n-1), N^n) 這一段；
-// 位址也用同一段，段內再做一個固定的置換。所以：
-//   每一頁仍然剛好出現一次；內容越短，位址越小、室號越短；相鄰位址的內容彼此無關。
+// ---- 置亂 ----
+// 頁面內容看成小端序整數 C ∈ [0, M)，位址 A = f(C)，f 是整個 [0, M) 上一個固定的置換。
+// 不分長短一起打散：一句話的頁面和寫滿的頁面，位址一樣是 [0, M) 裡隨便一個數，
+// 室號再補零到固定位數，所以每個網址都一樣長。每一頁仍然剛好出現一次；相鄰位址的內容彼此無關。
 function sfc32(a, b, c, d) {
   return function () {
     a >>>= 0; b >>>= 0; c >>>= 0; d >>>= 0;
@@ -531,7 +532,7 @@ function invMod2k(a, k) {            // 牛頓法求 a⁻¹ mod 2^k
   while (bits < k) { x = BigInt.asUintN(k, x * (2n - a * x)); bits *= 2; }
   return BigInt.asUintN(k, x * (2n - a * x));
 }
-// [0, 2^k) 上的置換：交替「乘奇數常數 mod 2^k」與「x ^ (x >> ⌈k/2⌉)」。常數由 k 決定，每個訪客都一樣。
+// [0, 2^k) 上的置換：交替「乘奇數常數 mod 2^k」與「x ^ (x >> ⌈k/2⌉)」。常數由固定種子與 k 決定，每個訪客都一樣。
 const permMemo = new Map();
 function permFor(k) {
   let P = permMemo.get(k);
@@ -568,27 +569,25 @@ function permFor(k) {
   permMemo.set(k, P);
   return P;
 }
-function layerBounds(n) {            // 長度 n 的頁面所佔的區段 [lo, hi)
-  return n === 0 ? [0n, 1n] : [pow(N, n - 1), pow(N, n)];
-}
-function layerOfAddr(a) {            // 二分搜尋：a 落在哪一層
-  if (a === 0n) return 0;
-  let lo = 1, hi = L;
-  while (lo < hi) { const mid = (lo + hi) >> 1; if (a < pow(N, mid)) hi = mid; else lo = mid + 1; }
-  return lo;
-}
-// 段內置換：在 2^k 上置換，用 cycle walking 限制回 [0, size)
-function permuteIn(n, x, inverse) {
-  const [lo, hi] = layerBounds(n), size = hi - lo;
-  if (size === 1n) return x;
+// [0, size) 上的置換：在 2^k（k = size−1 的位元數）上置換，用 cycle walking 限制回 [0, size)
+function permuteBelow(x, size, inverse) {
+  if (size <= 1n) return x;
   const P = permFor(bitLength(size - 1n)), step = inverse ? P.inv : P.f;
-  let y = step(x - lo);
+  let y = step(x);
   while (y >= size) y = step(y);
-  return lo + y;
+  return y;
 }
-function contentToAddrN(c, n) { return permuteIn(n, c, false); }
-function contentToAddr(c) { return contentToAddrN(c, layerOfAddr(c)); }
-function addrToContent(a) { return permuteIn(layerOfAddr(a), a, true); }
+function contentToAddr(c) { return permuteBelow(c, M, false); }
+function addrToContent(a) { return permuteBelow(a, M, true); }
+
+// 室號固定位數：補零到最大室號的長度
+const HEX_DIGITS = Math.ceil(bitLength(MAX_HEX - 1n) / 6);
+function hexStr(h) {
+  const d = bigToDigits(h, 64n, HEX_DIGITS);
+  let s = "";
+  for (let i = HEX_DIGITS - 1; i >= 0; i--) s += ROOM_DIGITS[d[i]];
+  return s;
+}
 
 // ---- 頁面 <-> 位址 ----
 function pageAt(a) {
@@ -599,9 +598,7 @@ function pageAt(a) {
 }
 function addrOfText(text) {         // text 長度須為 L，且都在字集中
   const chars = Array.from(text);
-  const d = chars.map((c) => INDEX.get(c));
-  let n = d.length; while (n > 0 && d[n - 1] === 0) n--;   // 最後一個非空白字
-  return contentToAddrN(digitsToBig(d, N), n);
+  return contentToAddr(digitsToBig(chars.map((c) => INDEX.get(c)), N));
 }
 function splitAddr(a) {
   let loc = Number(a % PER_HEX);
@@ -644,8 +641,8 @@ function unsupported(text) {
 }
 
 if (typeof module !== "undefined") module.exports = {
-  ALPHABET, N, L, M, K, MAX_HEX, PER_HEX, pageAt, addrOfText, splitAddr, joinAddr,
-  contentToAddr, addrToContent, layerOfAddr, parseBase36, randomBelow, normalize, unsupported, digitsToBig, bigToDigits,
+  ALPHABET, N, L, GRID, M, K, MAX_HEX, PER_HEX, pageAt, addrOfText, splitAddr, joinAddr,
+  contentToAddr, addrToContent, permuteBelow, HEX_DIGITS, hexStr, parseRoom, randomBelow, normalize, unsupported, digitsToBig, bigToDigits,
 };
 
 
@@ -663,18 +660,20 @@ $("a-punct").textContent = Array.from(PUNCT).length;
 $("a-n").textContent = $("a-n2").textContent = $("a-n3").textContent = fmt(Number(N));
 $("a-m").innerHTML = sup(LOG10);
 $("a-plist").textContent = PUNCT;
+$("a-hd").textContent = fmt(HEX_DIGITS);
 
 let current = null;      // 目前位址 BigInt
 let highlight = null;    // [start, len]
 let vertical = true;
 
 function shortHex(h, max = 16) {
-  const s = h.toString(36);
+  const s = hexStr(h);
   return s.length > max ? `${s.slice(0, 6)}…${s.slice(-6)}` : s;
 }
+const pad2 = (n) => String(n).padStart(2, "0"), pad3 = (n) => String(n).padStart(3, "0");   // 冊、頁也補零：每個位址一樣長
 function fullAddr(a) {
   const p = splitAddr(a);
-  return `${p.hex.toString(36)}:${p.wall}:${p.shelf}:${p.vol}:${p.page}`;
+  return `${hexStr(p.hex)}:${p.wall}:${p.shelf}:${pad2(p.vol)}:${pad3(p.page)}`;
 }
 function locHTML(a) {
   const p = splitAddr(a);
@@ -711,7 +710,7 @@ function locHTML(a) {
 })();
 
 function drawWhere(a) {
-  const p = splitAddr(a), hs = p.hex.toString(36);
+  const p = splitAddr(a), hs = hexStr(p.hex);
   document.querySelectorAll("#plan [data-w]").forEach((el) => el.classList.toggle("on", +el.dataset.w === p.wall));
   document.querySelectorAll("#shelves .shelf").forEach((row) => {
     const on = +row.dataset.s === p.shelf;
@@ -740,26 +739,11 @@ function render(animate = true) {
   pageEl.className = "page " + (vertical ? "v" : "h");
   drawWhere(current);
   const p = splitAddr(current);
-  $("hex").value = p.hex.toString(36);
+  $("hex").value = hexStr(p.hex);
   $("wall").value = p.wall; $("shelf").value = p.shelf; $("vol").value = p.vol; $("pg").value = p.page;
   $("prev").disabled = current === 0n;
   $("next").disabled = current >= M - 1n;
-  $("hint").textContent = vertical ? "直排，由右而左讀。往左捲動可以看完整頁三千二百字。" : "橫排。整頁三千二百字。";
-  // 捲到標記處（置中），沒有標記就回到頁首。用相對位移計算，不依賴瀏覽器的 scrollLeft 起點方向。
-  const sc = $("leaf-scroll"), mark = pageEl.querySelector("i.m");
-  if (vertical) {
-    const b = sc.getBoundingClientRect();
-    if (mark) {
-      const r = mark.getBoundingClientRect();
-      sc.scrollLeft += (r.left + r.right) / 2 - (b.left + b.right) / 2;
-    } else {
-      const r = pageEl.firstElementChild.getBoundingClientRect();
-      sc.scrollLeft += r.right - b.right + 40;
-    }
-  } else {
-    sc.scrollLeft = 0;
-    if (mark) mark.scrollIntoView({ block: "center" });
-  }
+  $("hint").textContent = vertical ? "直排，由右而左讀。一頁四百字，正好一張稿紙。" : "橫排，由左而右讀。一頁四百字，正好一張稿紙。";
   if (animate) {
     const v = $("veil");
     v.classList.remove("go", "h"); void v.offsetWidth;
@@ -772,16 +756,16 @@ function goTo(a, hl = null, animate = true) {
   syncURL();
 }
 
-// ---- 可分享的連結：網址就是位置 #a/<室號>/<牆>/<架>/<冊>/<頁>[~起,長] ----
+// ---- 可分享的連結：網址就是位置 #d/<室號>/<牆>/<架>/<冊>/<頁>[~起,長]，室號固定位數，所以每個網址都一樣長 ----
 function parseFull(raw) {
-  raw = raw.trim().toLowerCase().replace(/\s+/g, "");
+  raw = raw.trim().replace(/\s+/g, "");
   const seg = raw.split(/[:/]/);
   if (seg.length !== 5) throw new Error("完整位址的格式是「室號:牆:架:冊:頁」。");
   return checkAddr(seg[0], { wall: +seg[1], shelf: +seg[2], vol: +seg[3], page: +seg[4] });
 }
 function checkAddr(raw, parts) {
   if (!raw) throw new Error("請輸入室號。");
-  const hex = parseBase36(raw);
+  const hex = parseRoom(raw);
   const lim = { wall: 4, shelf: 5, vol: 32, page: 410 }, name = { wall: "牆", shelf: "架", vol: "冊", page: "頁" };
   for (const k in lim) if (!Number.isInteger(parts[k]) || parts[k] < 1 || parts[k] > lim[k]) throw new Error(`「${name[k]}」要介於 1 到 ${lim[k]} 之間。`);
   if (hex >= MAX_HEX) throw new Error("這個室號超出了圖書館的範圍：再往外已經沒有房間了。");
@@ -793,7 +777,7 @@ function hashFor(a, hl) {
   // 頁面若只有標記的那段文字、其後全是空白，標記就是多餘的：位置本身已經說明一切
   if (hl && hl[0] === 0 && /^　*$/.test(Array.from(pageAt(a)).slice(hl[1]).join(""))) hl = null;
   const p = splitAddr(a);
-  return `#a/${p.hex.toString(36)}/${p.wall}/${p.shelf}/${p.vol}/${p.page}${hl ? `~${hl[0]},${hl[1]}` : ""}`;
+  return `#d/${hexStr(p.hex)}/${p.wall}/${p.shelf}/${pad2(p.vol)}/${pad3(p.page)}${hl ? `~${hl[0]},${hl[1]}` : ""}`;
 }
 const linkFor = (a, hl) => location.origin + location.pathname + hashFor(a, hl);
 function syncURL() {            // 網址列永遠就是目前的位置
@@ -804,7 +788,7 @@ async function copyText(s, okMsg, noteId = "note") {
   try { await navigator.clipboard.writeText(s); note.textContent = okMsg; }
   catch { note.textContent = "無法自動複製，請手動複製：" + s; }
 }
-const linkMsg = (s) => s.length < 400 ? `已複製連結：${s}` : `已複製連結（${fmt(s.length)} 個字元。這一頁寫得很滿，所以位置也很長）`;
+const linkMsg = (s) => `已複製連結（${fmt(s.length)} 個字元。每一頁的位置都一樣長）`;
 
 $("random").onclick = () => goTo(randomBelow(M));
 $("prev").onclick = () => { if (current > 0n) goTo(current - 1n); };
@@ -816,7 +800,7 @@ $("go").onclick = () => {
   try {
     const raw = $("hex").value;
     const a = raw.includes(":") ? parseFull(raw)
-      : checkAddr(raw.trim().toLowerCase().replace(/\s+/g, ""), { wall: +$("wall").value, shelf: +$("shelf").value, vol: +$("vol").value, page: +$("pg").value });
+      : checkAddr(raw.trim().replace(/\s+/g, ""), { wall: +$("wall").value, shelf: +$("shelf").value, vol: +$("vol").value, page: +$("pg").value });
     goTo(a);
   } catch (e) { $("browse-err").textContent = e.message; }
 };
@@ -836,7 +820,7 @@ function badHTML(bad) {
 const qText = () => normalize($("q").value);
 function updateQ() {
   const t = Array.from(qText()), bad = unsupported(t.join(""));
-  $("q-count").textContent = `${fmt(t.length)} ／ 3,200 字`;
+  $("q-count").textContent = `${fmt(t.length)} ／ ${fmt(L)} 字`;
   $("q-bad").innerHTML = badHTML(bad);
   $("strip").hidden = !bad.length;
 }
@@ -847,7 +831,7 @@ function doSearch() {
   const err = $("search-err"); err.textContent = "";
   const t = Array.from(qText());
   if (!t.length) return void (err.textContent = "請先輸入文字。");
-  if (t.length > L) return void (err.textContent = `超過 3,200 字了（目前 ${fmt(t.length)} 字），一頁放不下。`);
+  if (t.length > L) return void (err.textContent = `超過 ${fmt(L)} 字了（目前 ${fmt(t.length)} 字），一頁放不下。`);
   if (unsupported(t.join("")).length) return void (err.textContent = "有些字不在字集裡，請刪掉，或按「把不支援的字換成空白」。");
   const pos = radio("pos"), fill = radio("fill");
   lastSearch = buildPage(t, pos, fill);
@@ -872,8 +856,23 @@ function openAt(a, hl) {        // 先讓翻閱頁可見，才能量位置、捲
 }
 
 // ---- 你的一生 ----
-const STORE = "babel-life-v1";
-function loadLedger() { try { return JSON.parse(localStorage.getItem(STORE)) || []; } catch { return []; } }
+const STORE = "babel-life-v4", OLD_STORES = ["babel-life-v3", "babel-life-v2", "babel-life-v1"];
+function loadLedger() {
+  try {
+    const cur = localStorage.getItem(STORE);
+    if (cur) return JSON.parse(cur) || [];
+    // 舊版索引的位址在館藏重新編排後失效：依句子重新找到「只有這句話」的那一頁
+    const raw = OLD_STORES.map((k) => localStorage.getItem(k)).find(Boolean);
+    const old = JSON.parse(raw || "null");
+    if (!Array.isArray(old) || !old.length) return [];
+    const list = old.filter((x) => x && x.line && !unsupported(x.line).length && Array.from(x.line).length <= L).map((x) => {
+      const hit = buildPage(Array.from(x.line), "start", "blank");
+      return { id: x.id, iso: x.iso, line: x.line, addr: fullAddr(hit.a), hl: hit.hl };
+    });
+    saveLedger(list);
+    return list;
+  } catch { return []; }
+}
 function saveLedger(x) { try { localStorage.setItem(STORE, JSON.stringify(x)); return true; } catch { return false; } }
 function todayISO() { const d = new Date(); return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`; }
 function zhDate(iso) {
@@ -1015,12 +1014,12 @@ function show(tab) {
 }
 function route() {
   const h = decodeURIComponent(location.hash.slice(1));
-  if (h.startsWith("p/")) {     // 11/23 第一版的連結：館已重新編排，位址不再相同
+  if (/^[pabc]\//.test(h)) {     // 舊版的連結（#p/ 帶文字、#a/ 分層置亂、#b/ 每頁 3,200 字、#c/ 36 進位室號）：館已重新編排，位址不再相同
     show("browse"); goTo(randomBelow(M));
-    $("note").textContent = "這是舊版的連結。11 月 24 日館藏重新編排過，舊位址已經對不到原本那一頁了，先帶你到隨機的一頁。";
+    $("note").textContent = "這是舊版的連結。館藏重新編排過，舊位址已經對不到原本那一頁了，先帶你到隨機的一頁。";
     return true;
   }
-  if (h.startsWith("a/")) {
+  if (h.startsWith("d/")) {
     show("browse");
     try {
       const [addr, hlRaw] = h.slice(2).split("~");
